@@ -1,9 +1,0 @@
-/**
- * middleware/logger.js
- */
-function requestLogger(req, _res, next) {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-}
-
-module.exports = { requestLogger };
