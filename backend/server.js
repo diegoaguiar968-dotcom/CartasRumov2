@@ -39,7 +39,7 @@ app.get('/api/status', (req, res) => {
     status: 'ok',
     message: 'Agente Rumo — Backend rodando!',
     version: '2.0.0',
-    ai: process.env.ANTHROPIC_API_KEY ? 'conectada' : 'desconectada (configure ANTHROPIC_API_KEY)',
+    ai: process.env.GEMINI_API_KEY ? 'conectada' : 'desconectada (configure GEMINI_API_KEY)',
   });
 });
 
@@ -70,7 +70,7 @@ async function iniciar() {
     console.log('Agente Rumo — Backend v2.0');
     console.log('═'.repeat(50));
     console.log(`Porta: ${PORT}`);
-    console.log(`Claude AI: ${process.env.ANTHROPIC_API_KEY ? 'configurada' : 'faltando ANTHROPIC_API_KEY'}`);
+    console.log(`Claude AI: ${process.env.GEMINI_API_KEY ? 'configurada' : 'faltando ANTHROPIC_API_KEY'}`);
     console.log(`Templates fixos: ${modelosPermanentes.length} modelo(s) carregado(s)`);
     console.log('═'.repeat(50));
   });
