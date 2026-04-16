@@ -4,7 +4,7 @@
  */
 
 const { gerarMinuta } = require('../services/claudeService');
-const { modelos, oficios, ultimaMinuta } = require('../services/store');
+const { modelos, oficios, modelosPermanentes, ultimaMinuta } = require('../services/store');
 
 async function gerarMinutaHandler(req, res, next) {
   try {
@@ -31,8 +31,9 @@ async function gerarMinutaHandler(req, res, next) {
       resposta: item.resposta || '',
     }));
 
-    // Concatena os textos dos modelos carregados para fornecer referência de estilo ao Claude
-    const textoModelosReferencia = modelos
+    // Templates fixos sempre presentes + modelos enviados pelo usuário
+    // Permanentes vêm primeiro para garantir que o estilo base nunca seja cortado
+    const textoModelosReferencia = [...modelosPermanentes, ...modelos]
       .map((m) => m.textoExtraido)
       .join('\n\n---\n\n')
       .substring(0, 8000); // ~5 cartas completas — limite seguro para o contexto do Claude
