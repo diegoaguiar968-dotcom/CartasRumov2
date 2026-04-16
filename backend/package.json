@@ -21,7 +21,7 @@
     "pdfkit": "^0.18.0"
   },
   "devDependencies": {
-    "type": "module",  // <--- Adicione esta linha
+    "type": "module",
     "nodemon": "^3.0.0"
   }
 }
