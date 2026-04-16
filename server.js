@@ -140,37 +140,45 @@ app.post('/api/oficio/upload', upload.single('file'), async (req, res) => {
     const dataBuffer = fs.readFileSync(req.file.path);
     const pdfData = await pdfParse(dataBuffer);
 
+    // Extraímos as solicitações do texto
     const oficiosSolicita = extrairSolicitacoes(pdfData.text);
 
-    const analise = {
+    // Criamos um pacote de análise completo
+    const analiseCompleta = {
       assunto: extrairAssunto(pdfData.text),
       dataReferencia: extrairData(pdfData.text),
       numeroOficio: extrairNumeroOficio(pdfData.text),
       solicitacoes: oficiosSolicita,
-      pontos: oficiosSolicita // Essencial para não dar erro
+      pontos: oficiosSolicita,
+      pontosChave: oficiosSolicita
     };
 
-    // Salvando os dados processados na "memória" para uso futuro
     oficiosProcessados.push({
       id: Date.now(),
       nome: req.file.originalname,
       texto: pdfData.text,
-      analise: analise
+      analise: analiseCompleta
     });
 
-    // Enviando resposta mega redundante para garantir que o Frontend ache a variável 'pontos'
+    // O "SUPER PAYLOAD": Mandamos os dados em todas as variáveis possíveis
     res.json({
       success: true,
       message: 'Ofício processado com sucesso',
+      pontos: oficiosSolicita,
+      analise: analiseCompleta,
       content: {
         texto: pdfData.text.substring(0, 3000),
-        analise: analise,
-        pontos: analise.pontos, // Segurança extra
+        analise: analiseCompleta,
+        pontos: oficiosSolicita,
         nomeArquivo: req.file.originalname
       },
-      analise: analise, // Segurança extra
-      pontos: analise.pontos // Segurança extra
+      dados: analiseCompleta,
+      data: analiseCompleta,
+      resultado: analiseCompleta,
+      oficio: analiseCompleta,
+      resposta: analiseCompleta
     });
+    
   } catch (error) {
     console.error('Erro no upload do ofício:', error);
     res.status(500).json({ success: false, message: 'Erro ao processar ofício', error: error.message });
