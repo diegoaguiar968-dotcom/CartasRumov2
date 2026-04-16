@@ -174,7 +174,7 @@ PADRÕES OBRIGATÓRIOS:
 ENTIDADE RESPONDENTE: ${malhaIdentificada}
 
 ${textoModelosReferencia ? `MODELOS DE REFERÊNCIA (use o estilo e vocabulário destes documentos):
-${textoModelosReferencia.substring(0, 3000)}` : ''}`;
+${textoModelosReferencia.substring(0, 8000)}` : ''}`;
 
   const pontosFormatados = pontosRespondidos
     ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   RESPOSTA DO USUÁRIO: ${item.resposta || '(não informado)'}`)
