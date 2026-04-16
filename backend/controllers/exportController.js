@@ -93,19 +93,22 @@ async function exportarDocx(req, res, next) {
 }
 
 /**
- * Retorna o texto como PDF simples (plaintext wrapped in PDF headers)
- * Para PDF com layout rico, use puppeteer ou uma biblioteca dedicada.
+ * Exporta o texto da minuta como arquivo .txt
+ * Para PDF com layout rico, adicione pdfkit ou puppeteer como dependência.
  */
 async function exportarPdf(req, res, next) {
   try {
     const { signatario, cargo, dadosResposta } = req.body;
     const conteudo = dadosResposta?.minuta || dadosResposta?.conteudo || dadosResposta?.texto || '';
 
+    if (!conteudo) {
+      return res.status(400).json({ success: false, message: 'Conteúdo da minuta não fornecido.' });
+    }
+
     const textoFinal = `RUMO LOGÍSTICA OPERADORA MULTIMODAL S.A.\n\n${conteudo}\n\nAtenciosamente,\n\n${signatario || '[SIGNATÁRIO]'}\n${cargo || '[CARGO]'}`;
 
-    // Para um PDF básico funcional — substitua por puppeteer para layout completo
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=resposta-antt.pdf');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=resposta-antt.txt');
     res.send(Buffer.from(textoFinal, 'utf-8'));
   } catch (err) {
     next(err);
