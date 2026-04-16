@@ -4,7 +4,7 @@
  */
 
 const { gerarMinuta } = require('../services/claudeService');
-const { modelos, oficios } = require('../services/store');
+const { modelos, oficios, ultimaMinuta } = require('../services/store');
 
 async function gerarMinutaHandler(req, res, next) {
   try {
@@ -50,6 +50,11 @@ async function gerarMinutaHandler(req, res, next) {
     });
 
     console.log('[Minuta] Gerada com sucesso.');
+
+    // Persiste no store para os endpoints GET de export
+    ultimaMinuta.texto = textoMinuta;
+    ultimaMinuta.signatario = signatario || '';
+    ultimaMinuta.cargo = cargo || '';
 
     // Retorna em múltiplos campos para compatibilidade com o frontend
     res.json({
