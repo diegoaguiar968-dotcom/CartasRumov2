@@ -4,7 +4,7 @@
  */
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-5-20251022';
 
 /**
  * Faz uma chamada à API Claude com retry automático em caso de sobrecarga.
