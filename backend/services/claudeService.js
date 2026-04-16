@@ -5,6 +5,7 @@
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
+const { resolverMalha } = require('./malhas');
 
 /**
  * Faz uma chamada à API Claude com retry automático em caso de sobrecarga.
@@ -98,6 +99,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "prazo": "prazo de resposta mencionado ou 'Não especificado'",
   "natureza": "tipo da solicitação (ex: Requerimento de Informações, Solicitação de Documentos) ou 'Não identificada'",
   "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
+  "malha": "qual entidade do grupo Rumo é destinatária ou mencionada no ofício — responda EXATAMENTE com uma das opções: rumo | norte | paulista | oeste | sul | central | não identificada",
   "pontos": [
     "ponto 1 a ser respondido",
     "ponto 2 a ser respondido"
@@ -107,6 +109,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   ]
 }
 
+Para o campo 'malha': procure no texto referências a contratos de concessão, trechos ferroviários, estados atendidos ou razão social. Use 'rumo' para RUMO S.A. (holding), 'norte' para Malha Norte, 'paulista' para Malha Paulista, 'oeste' para Malha Oeste, 'sul' para Malha Sul, 'central' para Malha Central.
 Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.`;
 
   const rawResponse = await callClaude(
@@ -131,6 +134,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
       prazo: 'Não especificado',
       natureza: 'Requerimento de Informação',
       fundamentoLegal: 'Não citado',
+      malha: 'não identificada',
       pontos: ['Não foi possível extrair os pontos automaticamente. Por favor, revise o PDF.'],
       documentosRequisitados: [],
     };
@@ -148,8 +152,17 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
  * @returns {Promise<string>} - Texto da minuta gerada
  */
 async function gerarMinuta({ briefing, signatario, cargo, pontosRespondidos, textoModelosReferencia }) {
-  const systemPrompt = `Você é o Assistente Regulatório da Rumo Logística Operadora Multimodal S.A., especializado em redigir 
-respostas institucionais a ofícios da ANTT. Você produz minutas formais de alta qualidade, prontas para aprovação e assinatura.
+  // Resolve os dados cadastrais da malha identificada
+  const malha = resolverMalha(briefing?.malha);
+  const malhaIdentificada = malha
+    ? `${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}`
+    : '[ENTIDADE NÃO IDENTIFICADA — verificar manualmente]';
+
+  const aberturaObrigatoria = malha
+    ? `A ${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}, concessionária prestadora do serviço público de transporte ferroviário de cargas,`
+    : 'A [ENTIDADE DO GRUPO RUMO], concessionária prestadora do serviço público de transporte ferroviário de cargas,';
+
+  const systemPrompt = `Você é o Assistente Regulatório do grupo Rumo, especializado em redigir respostas institucionais a ofícios da ANTT. Você produz minutas formais de alta qualidade, prontas para aprovação e assinatura.
 
 PADRÕES OBRIGATÓRIOS:
 - Tom: formal técnico-jurídico, nunca coloquial
@@ -157,6 +170,8 @@ PADRÕES OBRIGATÓRIOS:
 - Verbos na terceira pessoa do singular
 - Linguagem: terminologia do setor ferroviário e regulatório
 - Estrutura: cabeçalho de referência → abertura protocolar → atendimento aos pontos → encerramento formal
+
+ENTIDADE RESPONDENTE: ${malhaIdentificada}
 
 ${textoModelosReferencia ? `MODELOS DE REFERÊNCIA (use o estilo e vocabulário destes documentos):
 ${textoModelosReferencia.substring(0, 3000)}` : ''}`;
@@ -182,21 +197,26 @@ Prazo: ${briefing?.prazo || 'Não especificado'}
 Natureza: ${briefing?.natureza || 'Requerimento de Informação'}
 Fundamento Legal: ${briefing?.fundamentoLegal || 'Não citado'}
 
+═══════════ ENTIDADE RESPONDENTE ═══════════
+${malhaIdentificada}
+
 ═══════════ PONTOS A RESPONDER ═══════════
 ${pontosFormatados}
 
-═══════════ SIGNATÁRIO DA RUMO ═══════════
+═══════════ SIGNATÁRIO ═══════════
 Nome: ${signatario || '[NOME DO SIGNATÁRIO]'}
 Cargo: ${cargo || '[CARGO]'}
 
 Data de emissão: São Paulo, ${dataHoje}
 
 INSTRUÇÕES:
-1. Use a estrutura: referência ao ofício → saudação → contextualização → resposta numerada a cada ponto → encerramento → assinatura
-2. Para pontos sem resposta informada, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
-3. Inclua expressões protocolares como "Em atenção ao Ofício nº..." e "A Rumo permanece à disposição..."
-4. Numere o ofício como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
-5. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais`;
+1. O PRIMEIRO PARÁGRAFO DO CORPO deve começar OBRIGATORIAMENTE com:
+   "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria, em atenção ao ${briefing?.numero || 'Ofício'}, para..."
+2. Use a estrutura: referência ao ofício → abertura com identificação da empresa → atendimento numerado a cada ponto → encerramento → assinatura
+3. Para pontos sem resposta informada, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
+4. Inclua expressões protocolares como "A Rumo permanece à disposição..."
+5. Numere o ofício como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
+6. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais`;
 
   return callClaude(
     [{ role: 'user', content: userMessage }],
