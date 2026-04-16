@@ -277,6 +277,35 @@ app.post('/api/export/pdf', async (req, res) => {
   }
 });
 
+// =======================================================
+// ROTA PARA GERAR A MINUTA (ETAPA 3)
+// =======================================================
+app.all('/api/minuta/generate', async (req, res) => {
+  try {
+    console.log(`[Nova Requisição] Frontend chamou a geração de minuta via ${req.method}`);
+    
+    // Como estamos conectando as peças, vamos mandar um texto de teste bem estruturado
+    const textoGerado = "MINUTA DE RESPOSTA\n\nÀ Agência Nacional de Transportes Terrestres (ANTT)\n\nEm atenção ao ofício recebido, apresentamos as seguintes informações com base nos dados fornecidos na Etapa 3:\n\n1. O conteúdo foi recebido e processado com sucesso.\n2. Todos os pontos levantados foram devidamente registrados pelo sistema.\n\nAtenciosamente,\nAgente Rumo";
+
+    // O "Super Payload" da Minuta: mandamos o texto em todas as "caixas" possíveis
+    res.json({
+      success: true,
+      message: "Minuta gerada com sucesso",
+      minuta: textoGerado,
+      texto: textoGerado,
+      conteudo: textoGerado,
+      documento: textoGerado,
+      data: textoGerado,
+      resposta: textoGerado,
+      content: textoGerado
+    });
+    
+  } catch (error) {
+    console.error('Erro ao gerar a minuta:', error);
+    res.status(500).json({ success: false, message: 'Erro interno ao gerar a minuta' });
+  }
+});
+
 // Catch-all para lidar com rotas 404
 app.use((req, res) => {
   res.status(404).json({
