@@ -4,7 +4,7 @@
  */
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-5-20251022';
+const MODEL = 'claude-sonnet-4-6';
 
 /**
  * Faz uma chamada à API Claude com retry automático em caso de sobrecarga.
@@ -37,7 +37,7 @@ async function callClaude(messages, systemPrompt, maxTokens = 3000) {
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
+          'anthropic-version': '2024-06-01',
         },
         body: JSON.stringify(body),
       });
