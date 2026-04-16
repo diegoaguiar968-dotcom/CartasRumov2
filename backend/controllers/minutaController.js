@@ -8,24 +8,38 @@ const { modelos, oficios } = require('../services/store');
 
 async function gerarMinutaHandler(req, res, next) {
   try {
-    const { briefing, signatario, cargo, pontosRespondidos } = req.body;
+    const { signatario, cargo } = req.body;
 
+    // Aceita 'briefing' do body ou usa o último ofício processado no store
+    let briefing = req.body.briefing;
     if (!briefing) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dados do briefing são obrigatórios. Processe o ofício na Etapa 2 primeiro.',
-      });
+      const ultimoOficio = oficios[oficios.length - 1];
+      if (ultimoOficio?.briefing) {
+        briefing = ultimoOficio.briefing;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Dados do briefing são obrigatórios. Processe o ofício na Etapa 2 primeiro.',
+        });
+      }
     }
+
+    // Aceita 'pontos' (frontend) ou 'pontosRespondidos' (backend), mapeando 'pergunta' → 'ponto'
+    const rawPontos = req.body.pontosRespondidos || req.body.pontos || [];
+    const pontosRespondidos = rawPontos.map((item) => ({
+      ponto: item.ponto || item.pergunta || '',
+      resposta: item.resposta || '',
+    }));
 
     // Concatena os textos dos modelos carregados para fornecer referência de estilo ao Claude
     const textoModelosReferencia = modelos
       .map((m) => m.textoExtraido)
       .join('\n\n---\n\n')
-      .substring(0, 4000); // Limita para não sobrecarregar o contexto
+      .substring(0, 4000);
 
     console.log('[Minuta] Gerando com Claude...');
-    console.log(`[Minuta] Modelos de referência: ${modelos.length}`);
-    console.log(`[Minuta] Pontos a responder: ${pontosRespondidos?.length || 0}`);
+    console.log('[Minuta] Modelos de referência: ' + modelos.length);
+    console.log('[Minuta] Pontos a responder: ' + (pontosRespondidos?.length || 0));
 
     const textoMinuta = await gerarMinuta({
       briefing,
@@ -37,7 +51,6 @@ async function gerarMinutaHandler(req, res, next) {
 
     console.log('[Minuta] Gerada com sucesso.');
 
-    // Retorna em múltiplos campos para compatibilidade com o frontend
     res.json({
       success: true,
       message: 'Minuta gerada com sucesso.',
