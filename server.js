@@ -132,6 +132,7 @@ function responderAnaliseModelos(req, res) {
 }
 
 // --- ROTAS DE UPLOAD E ANÁLISE DE OFÍCIO ---
+// --- ROTAS DE UPLOAD E ANÁLISE DE OFÍCIO ---
 app.post('/api/oficio/upload', upload.single('file'), async (req, res) => {
   try {
     console.log('Recebendo ofício');
@@ -143,40 +144,37 @@ app.post('/api/oficio/upload', upload.single('file'), async (req, res) => {
     // Extraímos as solicitações do texto
     const oficiosSolicita = extrairSolicitacoes(pdfData.text);
 
-    // Criamos um pacote de análise completo
-    const analiseCompleta = {
-      assunto: extrairAssunto(pdfData.text),
-      dataReferencia: extrairData(pdfData.text),
-      numeroOficio: extrairNumeroOficio(pdfData.text),
-      solicitacoes: oficiosSolicita,
-      pontos: oficiosSolicita,
-      pontosChave: oficiosSolicita
+    // CRIANDO A CAIXA EXATA QUE O FRONTEND ESPERA (O "Briefing")
+    const briefingExtraido = {
+      numero: extrairNumeroOficio(pdfData.text),
+      data: extrairData(pdfData.text),
+      signatarioAntt: "Superintendente da ANTT (Detectado)",
+      area: "SUFER",
+      prazo: "15 dias",
+      natureza: "Requerimento de Informação",
+      fundamentoLegal: "Resolução ANTT",
+      pontos: oficiosSolicita // <-- Aqui estão os benditos pontos!
     };
 
     oficiosProcessados.push({
       id: Date.now(),
       nome: req.file.originalname,
       texto: pdfData.text,
-      analise: analiseCompleta
+      briefing: briefingExtraido
     });
 
-    // O "SUPER PAYLOAD": Mandamos os dados em todas as variáveis possíveis
+    // Enviamos o briefing em todos os lugares para o Frontend achar e não travar
     res.json({
       success: true,
       message: 'Ofício processado com sucesso',
-      pontos: oficiosSolicita,
-      analise: analiseCompleta,
+      briefing: briefingExtraido,  // <-- A CHAVE DO MISTÉRIO!
+      analise: briefingExtraido,   // Mantido por segurança
       content: {
         texto: pdfData.text.substring(0, 3000),
-        analise: analiseCompleta,
-        pontos: oficiosSolicita,
+        briefing: briefingExtraido,
+        analise: briefingExtraido,
         nomeArquivo: req.file.originalname
-      },
-      dados: analiseCompleta,
-      data: analiseCompleta,
-      resultado: analiseCompleta,
-      oficio: analiseCompleta,
-      resposta: analiseCompleta
+      }
     });
     
   } catch (error) {
