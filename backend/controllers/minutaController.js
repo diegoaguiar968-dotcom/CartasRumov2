@@ -4,7 +4,7 @@
  */
 
 const { gerarMinuta } = require('../services/claudeService');
-const { modelos, oficios } = require('../services/store');
+const { modelos, oficios, ultimaMinuta } = require('../services/store');
 
 async function gerarMinutaHandler(req, res, next) {
   try {
@@ -35,11 +35,11 @@ async function gerarMinutaHandler(req, res, next) {
     const textoModelosReferencia = modelos
       .map((m) => m.textoExtraido)
       .join('\n\n---\n\n')
-      .substring(0, 4000);
+      .substring(0, 4000); // Limita para não sobrecarregar o contexto
 
     console.log('[Minuta] Gerando com Claude...');
-    console.log('[Minuta] Modelos de referência: ' + modelos.length);
-    console.log('[Minuta] Pontos a responder: ' + (pontosRespondidos?.length || 0));
+    console.log(`[Minuta] Modelos de referência: ${modelos.length}`);
+    console.log(`[Minuta] Pontos a responder: ${pontosRespondidos?.length || 0}`);
 
     const textoMinuta = await gerarMinuta({
       briefing,
@@ -51,6 +51,12 @@ async function gerarMinutaHandler(req, res, next) {
 
     console.log('[Minuta] Gerada com sucesso.');
 
+    // Persiste no store para os endpoints GET de export
+    ultimaMinuta.texto = textoMinuta;
+    ultimaMinuta.signatario = signatario || '';
+    ultimaMinuta.cargo = cargo || '';
+
+    // Retorna em múltiplos campos para compatibilidade com o frontend
     res.json({
       success: true,
       message: 'Minuta gerada com sucesso.',
