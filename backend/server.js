@@ -15,6 +15,7 @@ const { modelosPermanentes } = require('./services/store');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const API_URL = 'https://agente-rumo-backend.onrender.com'
 
 // ─── Garantir que o diretório de uploads existe ───
 const uploadDir = path.join(__dirname, 'uploads');
