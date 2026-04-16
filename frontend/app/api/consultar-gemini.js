@@ -1,7 +1,8 @@
-// api/consultar-gemini.js
 export default async function handler(req, res) {
+    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+
     const { prompt } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY; // Aqui ele pega a chave que você salvou na Vercel
+    const apiKey = process.env.GEMINI_API_KEY; // Pega a chave que você colocou na Vercel
     const model = "gemini-1.5-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -17,6 +18,6 @@ export default async function handler(req, res) {
         const texto = data.candidates[0].content.parts[0].text;
         res.status(200).json({ resultado: texto });
     } catch (error) {
-        res.status(500).json({ error: "Erro ao consultar Gemini" });
+        res.status(500).json({ error: "Erro ao consultar Gemini", details: error.message });
     }
 }
