@@ -54,19 +54,20 @@ const oficiosProcessados = [];
 
 // ============ ENDPOINTS DA API ============
 
-// Função centralizada para processar os PDFs (evita código repetido)
+// 1. STATUS DO SERVIDOR (Estava faltando!)
+app.get('/api/status', (req, res) => {
+  res.json({ success: true, status: 'ok', message: 'Servidor rodando perfeitamente!' });
+});
+
+// Função centralizada para processar os PDFs
 const processarUploadModelos = async (req, res) => {
   try {
     console.log('Recebendo modelos:', req.files?.length, 'arquivos');
     
-    // O frontend pode enviar como 'files' (array) ou 'file' (único), vamos aceitar ambos
     const arquivosRecebidos = req.files || (req.file ? [req.file] : []);
 
     if (arquivosRecebidos.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Nenhum arquivo enviado' 
-      });
+      return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado' });
     }
 
     const arquivosProcessados = [];
@@ -107,18 +108,31 @@ const processarUploadModelos = async (req, res) => {
 
   } catch (error) {
     console.error('Erro no upload de modelos:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao processar arquivos',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erro ao processar arquivos', error: error.message });
   }
 };
 
-// --- ROTAS ORIGINAIS ---
+// --- ROTAS DE UPLOAD E ANÁLISE DE MODELOS ---
 app.post('/api/models/upload', upload.array('files'), processarUploadModelos);
+app.post('/upload', upload.any(), processarUploadModelos);
+app.post('/api/upload', upload.any(), processarUploadModelos);
+
+app.get('/api/models/analyze', responderAnaliseModelos);
+app.post('/api/models/analyze', responderAnaliseModelos);
+
+function responderAnaliseModelos(req, res) {
+  console.log('[Análise] Frontend pediu para analisar os modelos');
+  res.json({
+    success: true,
+    message: 'Análise concluída com sucesso',
+    totalAnalisado: modelosProcessados.length,
+    analise: { pontos: ["Leitura dos modelos concluída", "Padrões identificados"] },
+    pontos: ["Leitura dos modelos concluída", "Padrões identificados"]
+  });
+}
+
+// --- ROTAS DE UPLOAD E ANÁLISE DE OFÍCIO ---
 app.post('/api/oficio/upload', upload.single('file'), async (req, res) => {
-  // Lógica original do ofício mantida igual...
   try {
     console.log('Recebendo ofício');
     if (!req.file) return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado' });
@@ -126,33 +140,36 @@ app.post('/api/oficio/upload', upload.single('file'), async (req, res) => {
     const dataBuffer = fs.readFileSync(req.file.path);
     const pdfData = await pdfParse(dataBuffer);
 
-    const oficio = {
-      id: Date.now(),
-      nome: req.file.originalname,
-      texto: pdfData.text,
-      dataUpload: new Date().toISOString(),
-      caminho: req.file.path
-    };
+    const oficiosSolicita = extrairSolicitacoes(pdfData.text);
 
-    oficiosProcessados.push(oficio);
-    
-// Análise simples do conteúdo (simulação)
     const analise = {
       assunto: extrairAssunto(pdfData.text),
       dataReferencia: extrairData(pdfData.text),
       numeroOficio: extrairNumeroOficio(pdfData.text),
-      solicitacoes: extrairSolicitacoes(pdfData.text),
-      pontos: extrairSolicitacoes(pdfData.text) // <--- ADICIONAMOS ESSA LINHA
+      solicitacoes: oficiosSolicita,
+      pontos: oficiosSolicita // Essencial para não dar erro
     };
 
+    // Salvando os dados processados na "memória" para uso futuro
+    oficiosProcessados.push({
+      id: Date.now(),
+      nome: req.file.originalname,
+      texto: pdfData.text,
+      analise: analise
+    });
+
+    // Enviando resposta mega redundante para garantir que o Frontend ache a variável 'pontos'
     res.json({
       success: true,
       message: 'Ofício processado com sucesso',
       content: {
         texto: pdfData.text.substring(0, 3000),
         analise: analise,
+        pontos: analise.pontos, // Segurança extra
         nomeArquivo: req.file.originalname
-      }
+      },
+      analise: analise, // Segurança extra
+      pontos: analise.pontos // Segurança extra
     });
   } catch (error) {
     console.error('Erro no upload do ofício:', error);
@@ -160,12 +177,34 @@ app.post('/api/oficio/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// --- ROTAS DE SEGURANÇA (ALIASES PARA O FRONTEND PERDIDO) ---
-// Qualquer uma dessas rotas fará o upload funcionar, usando '.any()' para aceitar qualquer nome de campo do formulário
-app.post('/upload', upload.any(), processarUploadModelos);
-app.post('/api/upload', upload.any(), processarUploadModelos);
+// Prevenção extra: Se o frontend tentar analisar o ofício separadamente
+app.post('/api/oficio/analyze', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Ofício analisado com sucesso!',
+    pontos: ["Ofício lido", "Aguardando geração da resposta"],
+    analise: { pontos: ["Ofício lido", "Aguardando geração da resposta"] }
+  });
+});
 
-// Gerar minuta de resposta (DOCX)
+
+// --- ROTAS DE GERAÇÃO (A etapa pós-análise estava faltando no código gerado!) ---
+app.post('/api/generate', gerarRespostaMock);
+app.post('/api/resposta/gerar', gerarRespostaMock);
+
+function gerarRespostaMock(req, res) {
+  console.log('[Geração] Frontend pediu para gerar a resposta final');
+  res.json({
+    success: true,
+    message: 'Resposta gerada com sucesso!',
+    textoGerado: gerarConteudoPadrao({}),
+    resposta: gerarConteudoPadrao({}), // Por via das dúvidas
+    pontosAbordados: ["Resposta aos apontamentos da ANTT", "Cumprimento de prazos"]
+  });
+}
+
+
+// --- ROTAS DE EXPORTAÇÃO ---
 app.post('/api/export/docx', async (req, res) => {
   try {
     const { signatario, cargo, dadosResposta } = req.body;
@@ -180,7 +219,7 @@ app.post('/api/export/docx', async (req, res) => {
           new Paragraph({ text: '' }),
           new Paragraph({ children: [ new TextRun({ text: 'Assunto: ', bold: true }), new TextRun({ text: dadosResposta?.assunto || 'Resposta ao Ofício da ANTT' }) ] }),
           new Paragraph({ text: '' }),
-          new Paragraph({ text: dadosResposta?.conteudo || gerarConteudoPadrao(dadosResposta) }),
+          new Paragraph({ text: dadosResposta?.conteudo || dadosResposta?.texto || gerarConteudoPadrao(dadosResposta) }),
           new Paragraph({ text: '' }),
           new Paragraph({ text: '' }),
           new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({ text: 'Atenciosamente,' }) ] }),
@@ -203,7 +242,6 @@ app.post('/api/export/docx', async (req, res) => {
   }
 });
 
-// Gerar PDF
 app.post('/api/export/pdf', async (req, res) => {
   try {
     const { signatario, cargo, dadosResposta } = req.body;
@@ -216,7 +254,7 @@ app.post('/api/export/pdf', async (req, res) => {
       
       Assunto: ${dadosResposta?.assunto || 'Resposta ao Ofício da ANTT'}
       
-      ${dadosResposta?.conteudo || gerarConteudoPadrao(dadosResposta)}
+      ${dadosResposta?.conteudo || dadosResposta?.texto || gerarConteudoPadrao(dadosResposta)}
       
       Atenciosamente,
       
@@ -231,34 +269,6 @@ app.post('/api/export/pdf', async (req, res) => {
     console.error('Erro ao gerar PDF:', error);
     res.status(500).json({ success: false, message: 'Erro ao gerar PDF', error: error.message });
   }
-});
-
-// Rota de Análise dos Modelos (Aceitando GET e POST)
-
-app.get('/api/models/analyze', (req, res) => {
-  console.log('[Análise] Frontend pediu para analisar os modelos (GET)');
-  res.json({
-    success: true,
-    message: 'Análise concluída com sucesso',
-    totalAnalisado: modelosProcessados.length,
-    analise: {
-      pontos: ["Leitura dos modelos concluída", "Padrões de resposta identificados"]
-    },
-    pontos: ["Leitura dos modelos concluída"] // Enviamos solto também por garantia
-  });
-});
-
-app.post('/api/models/analyze', (req, res) => {
-  console.log('[Análise] Frontend pediu para analisar os modelos (POST)');
-  res.json({
-    success: true,
-    message: 'Análise concluída com sucesso',
-    totalAnalisado: modelosProcessados.length,
-    analise: {
-      pontos: ["Leitura dos modelos concluída", "Padrões de resposta identificados"]
-    },
-    pontos: ["Leitura dos modelos concluída"] // Enviamos solto também por garantia
-  });
 });
 
 // Catch-all para lidar com rotas 404
@@ -296,11 +306,11 @@ function extrairSolicitacoes(texto) {
     }
   }
   
-  return solicitacoes.length > 0 ? solicitacoes : ['Nenhuma solicitação específica identificada'];
+  return solicitacoes.length > 0 ? solicitacoes : ['Nenhuma solicitação específica identificada no texto do Ofício.'];
 }
 
 function gerarConteudoPadrao(dados) {
-  return `Prezados Senhores,\n\nEm resposta ao ofício recebido, vimos por meio deste apresentar as informações solicitadas.\n\n[Conteúdo da resposta será gerado com base nos modelos carregados e no ofício recebido]\n\nAguardamos novas orientações.\n\nAtenciosamente.`;
+  return `Prezados Senhores,\n\nEm resposta ao ofício recebido, vimos por meio deste apresentar as informações solicitadas.\n\n[O conteúdo inteligente da resposta apareceria aqui. Como este é o MVP, apresentamos este texto padrão gerado pelo sistema.]\n\nAguardamos novas orientações.\n\nAtenciosamente.`;
 }
 
 // Iniciar servidor
@@ -309,8 +319,6 @@ app.listen(PORT, () => {
   console.log('🚀 Agente Rumo - Backend');
   console.log('='.repeat(50));
   console.log(`📡 Servidor rodando na porta ${PORT}`);
-  console.log(`🌐 URL: http://localhost:${PORT}`);
-  console.log(`📊 Status: http://localhost:${PORT}/api/status`);
   console.log('='.repeat(50));
 });
 
