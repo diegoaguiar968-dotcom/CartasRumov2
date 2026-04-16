@@ -35,7 +35,7 @@ async function gerarMinutaHandler(req, res, next) {
     const textoModelosReferencia = modelos
       .map((m) => m.textoExtraido)
       .join('\n\n---\n\n')
-      .substring(0, 4000); // Limita para não sobrecarregar o contexto
+      .substring(0, 8000); // ~5 cartas completas — limite seguro para o contexto do Claude
 
     console.log('[Minuta] Gerando com Claude...');
     console.log(`[Minuta] Modelos de referência: ${modelos.length}`);
