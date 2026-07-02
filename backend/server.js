@@ -13,11 +13,13 @@ const modelRoutes = require('./routes/models');
 const oficioRoutes = require('./routes/oficio');
 const minutaRoutes = require('./routes/minuta');
 const exportRoutes = require('./routes/export');
+const historicoRoutes = require('./routes/historico');
 const { requestLogger } = require('./middleware/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { sessionMiddleware } = require('./middleware/session');
 const { carregarTemplatesFixos } = require('./services/templateService');
 const { modelosPermanentes } = require('./services/store');
+const { initDb } = require('./services/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +51,10 @@ app.use('/api/models', modelRoutes);
 app.use('/api/oficio', oficioRoutes);
 app.use('/api/minuta', minutaRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/historico', historicoRoutes);
+
+// ─── Página do histórico (servida diretamente pelo backend) ───
+app.use('/historico', express.static(path.join(__dirname, 'public')));
 
 // ─── Catch-all 404 ───
 app.use((req, res) => {
@@ -63,6 +69,9 @@ app.use(errorHandler);
 
 // ─── Inicializar ───
 async function iniciar() {
+  // Inicializa o banco de dados do histórico (no-op se DATABASE_URL ausente)
+  await initDb();
+
   // Carrega os modelos DOCX fixos antes de aceitar requisições
   const templates = await carregarTemplatesFixos();
   modelosPermanentes.push(...templates);
