@@ -7,10 +7,12 @@ import {
   ArrowLeft,
   FileText,
   FileCheck,
+  CheckCircle2,
   Loader2,
   Send,
   Download,
   Sparkles,
+  Lightbulb,
 } from "lucide-react";
 import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
 import {
@@ -407,20 +409,192 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto px-6 py-8 w-full">
-        {/* ── Stepper ── */}
-        <div className="flex gap-2 mb-8">
-          {steps.map((step) => (
-            <button
-              key={step.key}
-              onClick={() => goTo(step.key)}
-              className={`step-pill ${activeStepKey === step.key ? "active" : ""} ${
-                completedKeys.has(step.key) ? "completed" : ""
-              }`}
-            >
-              <span className="step-number">{step.number.toString().padStart(2, "0")}</span>
-              <span className="step-label">{step.label}</span>
-            </button>
-          ))}
+        {/* ── Stepper ferroviário: vagões sobre trilhos ── */}
+        <div className="relative mb-10" style={{ minHeight: "105px" }}>
+          {/* Trilhos com dormentes */}
+          <div
+            style={{
+              position: "absolute",
+              left: "20px",
+              right: "20px",
+              bottom: "9px",
+              height: "11px",
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          >
+            <div style={{ height: "3px", background: "hsl(var(--border) / 0.9)", borderRadius: "2px" }} />
+            <div
+              style={{
+                height: "5px",
+                backgroundImage:
+                  "repeating-linear-gradient(90deg, transparent 0px, transparent 14px, hsl(210 30% 28% / 0.55) 14px, hsl(210 30% 28% / 0.55) 18px)",
+              }}
+            />
+            <div style={{ height: "3px", background: "hsl(var(--border) / 0.9)", borderRadius: "2px" }} />
+          </div>
+
+          {/* Vagões */}
+          <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-end", gap: "6px" }}>
+            {steps.map((step) => {
+              const ativo = activeStepKey === step.key;
+              const concluido = completedKeys.has(step.key) && !ativo;
+              const corBorda = ativo
+                ? "hsl(var(--primary))"
+                : concluido
+                ? "hsl(var(--rumo-green) / 0.65)"
+                : "hsl(var(--border))";
+              const corFundo = ativo
+                ? "hsl(var(--primary) / 0.13)"
+                : concluido
+                ? "hsl(var(--rumo-green) / 0.09)"
+                : "hsl(var(--surface-card))";
+              const corTexto = ativo
+                ? "hsl(var(--primary))"
+                : concluido
+                ? "hsl(var(--rumo-green))"
+                : "hsl(var(--text-muted))";
+              const corRoda = ativo
+                ? "hsl(var(--primary) / 0.55)"
+                : concluido
+                ? "hsl(var(--rumo-green) / 0.4)"
+                : "hsl(var(--surface-hover))";
+              const corRodaBorda = ativo
+                ? "hsl(var(--primary))"
+                : concluido
+                ? "hsl(var(--rumo-green) / 0.8)"
+                : "hsl(var(--border))";
+              return (
+                <button
+                  key={step.key}
+                  onClick={() => goTo(step.key)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                  }}
+                >
+                  {/* Cabine da locomotiva — cresce sobre o vagão ativo */}
+                  <div
+                    style={{
+                      height: ativo ? "15px" : "0px",
+                      overflow: "hidden",
+                      transition: "height 0.3s ease",
+                      display: "flex",
+                      alignItems: "flex-end",
+                      justifyContent: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "38%",
+                        height: "15px",
+                        background: "hsl(var(--primary))",
+                        borderRadius: "5px 5px 0 0",
+                        position: "relative",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "-7px",
+                          left: "10px",
+                          width: "7px",
+                          height: "8px",
+                          background: "hsl(var(--primary))",
+                          borderRadius: "2px 2px 0 0",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Corpo do vagão */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "62px",
+                      background: corFundo,
+                      border: `1.5px solid ${corBorda}`,
+                      borderRadius: "6px 6px 3px 3px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "4px",
+                      transition: "all 0.25s ease",
+                      boxShadow: ativo ? "0 0 14px hsl(var(--primary) / 0.22)" : "none",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: corTexto,
+                        transition: "color 0.25s",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {concluido ? (
+                        <CheckCircle2 style={{ width: "14px", height: "14px", color: "hsl(var(--rumo-green))" }} />
+                      ) : (
+                        step.number.toString().padStart(2, "0")
+                      )}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 500,
+                        color: corTexto,
+                        transition: "color 0.25s",
+                        textAlign: "center",
+                        lineHeight: 1.25,
+                        padding: "0 5px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: "100%",
+                      }}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+
+                  {/* Rodas */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      width: "calc(100% - 14px)",
+                      marginTop: "-5px",
+                    }}
+                  >
+                    {[0, 1].map((i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "50%",
+                          background: corRoda,
+                          border: `2px solid ${corRodaBorda}`,
+                          transition: "all 0.25s",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ═══════ ETAPA 1 — Modelos/Templates ═══════ */}
@@ -483,7 +657,7 @@ export default function App() {
             })}
 
             <div className="flex justify-end gap-3 pt-2">
-              <SecondaryButton onClick={() => escolherFluxo("espontanea")}>
+              <SecondaryButton disabled={!selectedTemplate} onClick={() => escolherFluxo("espontanea")}>
                 Carta Espontânea <ArrowRight className="w-4 h-4" />
               </SecondaryButton>
               <PrimaryButton disabled={!selectedTemplate} onClick={() => escolherFluxo("resposta")}>
@@ -822,21 +996,266 @@ export default function App() {
 
         {/* ═══════ ETAPA 5 — Como usar ═══════ */}
         {activeStepKey === "ajuda" && (
-          <div className="space-y-4">
-            <InfoCard title="Como usar este agente">
-              <div className="space-y-3 mt-2">
+          <div className="space-y-5">
+            <div className="info-card">
+              <h2 className="font-semibold text-white text-[15px] mb-1">Como usar o ARCA</h2>
+              <p style={{ color: "hsl(var(--text-muted))", fontSize: "13px", lineHeight: "1.6" }}>
+                A ferramenta opera em dois modos:{" "}
+                <strong className="text-white">Carta Resposta</strong> (quando a ANTT envia um ofício
+                solicitando informações) e <strong className="text-white">Carta Espontânea</strong>{" "}
+                (quando a Rumo toma a iniciativa de comunicação). Nos dois casos, a IA redige a minuta
+                completa no padrão institucional Rumo e exporta o arquivo Word pronto para revisão.
+              </p>
+            </div>
+
+            {/* ── Modo Carta Resposta ── */}
+            <div className="info-card" style={{ borderColor: "hsl(var(--rumo-green) / 0.3)" }}>
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "hsl(var(--rumo-green))" }}
+              >
+                Modo Carta Resposta (resposta a ofício)
+              </p>
+              <div className="space-y-3">
                 {[
-                  ["Etapa 1 — Selecione o modelo:", "Escolha o tipo de carta mais adequado para esta resposta."],
-                  ["Etapa 2 — Ofício ou dados diretos:", "Envie o ofício recebido (Carta Resposta) ou preencha os dados diretamente (Carta Espontânea)."],
-                  ["Etapa 3 — Revise os pontos:", "Responda cada ponto identificado pela IA."],
-                  ["Etapa 4 — Minuta gerada:", "Revise, refine com a IA e baixe o arquivo Word pronto."],
-                ].map(([t, d]) => (
-                  <p key={t}>
-                    <strong style={{ color: "hsl(var(--text-primary))" }}>{t}</strong> {d}
-                  </p>
+                  {
+                    num: "1",
+                    title: "Escolha o modelo de carta",
+                    desc: "Selecione o tipo de carta adequado ao teor do ofício. O modelo define a estrutura, o tom e a formatação do documento final.",
+                  },
+                  {
+                    num: "2",
+                    title: "Faça upload do ofício recebido",
+                    desc: "Envie o PDF do ofício da ANTT. A IA extrai automaticamente número, processo SEI, prazo, signatário, malha(s) envolvida(s) e todos os pontos que precisam de resposta.",
+                  },
+                  {
+                    num: "2+",
+                    title: "Adicione documentos complementares (opcional)",
+                    desc: "Se o ofício vier acompanhado de nota técnica, resolução ou outro documento de referência, faça upload aqui. Esses arquivos enriquecem o contexto da IA mas não são listados individualmente na carta.",
+                  },
+                  {
+                    num: "3",
+                    title: "Forneça as respostas de mérito",
+                    desc: "Preencha a resposta para cada ponto levantado no ofício. Seja preciso — apenas você detém as informações técnicas reais. A IA usa o que você escreveu para redigir a minuta.",
+                  },
+                  {
+                    num: "4",
+                    title: "Revise, refine e exporte",
+                    desc: "Leia a minuta. Use o chat para solicitar ajustes pontuais sem regerar do zero. Informe o número interno da carta (ex: 0001) e exporte em .docx.",
+                  },
+                ].map((s) => (
+                  <div key={s.num} className="flex gap-3">
+                    <div
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                      style={{ background: "hsl(var(--rumo-green) / 0.12)", color: "hsl(var(--rumo-green))" }}
+                    >
+                      {s.num}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white text-sm mb-0.5">{s.title}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
+                        {s.desc}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </InfoCard>
+            </div>
+
+            {/* ── Modo Carta Espontânea ── */}
+            <div className="info-card" style={{ borderColor: "hsl(var(--primary) / 0.3)" }}>
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "hsl(var(--primary))" }}
+              >
+                Modo Carta Espontânea (comunicação proativa)
+              </p>
+              <div className="space-y-3">
+                {[
+                  {
+                    num: "1",
+                    title: "Escolha o modelo de carta",
+                    desc: "Selecione o tipo de carta. Para comunicações proativas use preferencialmente o modelo Documentação ou Objetiva.",
+                  },
+                  {
+                    num: "2",
+                    title: "Preencha os dados da carta",
+                    desc: "Informe destinatário, cargo e área na ANTT; marque a(s) malha(s) Rumo remetente(s) — pode ser mais de uma; descreva o assunto com os dados e argumentos relevantes; e, se houver, informe processo SEI e referência. Adicione documentos complementares para enriquecer o contexto da IA.",
+                  },
+                  {
+                    num: "3",
+                    title: "Revise, refine e exporte",
+                    desc: "Revise a minuta gerada, use o chat para ajustes e exporte. Informe o número interno da carta antes de baixar o arquivo.",
+                  },
+                ].map((s) => (
+                  <div key={s.num} className="flex gap-3">
+                    <div
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                      style={{ background: "hsl(var(--primary) / 0.12)", color: "hsl(var(--primary))" }}
+                    >
+                      {s.num}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white text-sm mb-0.5">{s.title}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
+                        {s.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Modelos de carta ── */}
+            <div className="info-card">
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "hsl(var(--text-secondary))" }}
+              >
+                Os três modelos de carta
+              </p>
+              <div className="space-y-3">
+                {[
+                  {
+                    icon: Zap,
+                    nome: "Resposta Objetiva",
+                    desc: "Para respostas curtas com 1 a 2 pontos. Tom direto, sem subdivisões — ideal para dilações de prazo, confirmações e comunicados simples.",
+                  },
+                  {
+                    icon: Paperclip,
+                    nome: "Resposta com Documentação",
+                    desc: "Quando a carta encaminha documentos como anexos ou faz referência a arquivos. Inclui seção de documentos encaminhados ao final do corpo.",
+                  },
+                  {
+                    icon: Scale,
+                    nome: "Resposta Jurídico-Regulatória",
+                    desc: "Para respostas com fundamentação legal, citação de normas, resoluções ANTT ou cláusulas contratuais. Estrutura com numeração romana e linguagem jurídica formal.",
+                  },
+                ].map((m) => (
+                  <div key={m.nome} className="flex gap-3">
+                    <div
+                      className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{ background: "hsl(var(--surface-hover))" }}
+                    >
+                      <m.icon className="w-3.5 h-3.5" style={{ color: "hsl(var(--text-secondary))" }} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white text-sm mb-0.5">{m.nome}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
+                        {m.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Identificação e histórico ── */}
+            <div className="info-card" style={{ borderColor: "hsl(var(--rumo-green) / 0.3)" }}>
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "hsl(var(--rumo-green))" }}
+              >
+                Identificação e histórico compartilhado
+              </p>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                    style={{ background: "hsl(var(--rumo-green) / 0.12)", color: "hsl(var(--rumo-green))" }}
+                  >
+                    👤
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm mb-0.5">Identifique-se (canto inferior esquerdo)</p>
+                    <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
+                      Preencha seu nome e área uma única vez. Cada carta que você baixar será registrada
+                      automaticamente em seu nome no histórico da equipe.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                    style={{ background: "hsl(var(--rumo-green) / 0.12)", color: "hsl(var(--rumo-green))" }}
+                  >
+                    🗂
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm mb-0.5">Histórico de cartas da equipe</p>
+                    <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
+                      Toda carta exportada fica registrada no{" "}
+                      <a
+                        href={`${(window as any).API_URL || ""}/historico`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: "hsl(var(--primary))", textDecoration: "underline" }}
+                      >
+                        histórico compartilhado
+                      </a>
+                      , com filtros por responsável, malha e período. Em "Ver detalhes" os campos aparecem
+                      na mesma ordem da lista do SharePoint, prontos para copiar — e é possível baixar
+                      novamente o .docx de qualquer carta já gerada.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Boas práticas ── */}
+            <div className="info-card">
+              <p
+                className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "hsl(204 76% 65%)" }}
+              >
+                Boas práticas
+              </p>
+              <div className="space-y-2">
+                {[
+                  {
+                    tip: "Respostas de mérito detalhadas geram minutas melhores.",
+                    detail:
+                      "Quanto mais contexto técnico você fornecer nos campos de resposta, menor a necessidade de refinamento posterior.",
+                  },
+                  {
+                    tip: "Use o chat de refinamento para ajustes pontuais.",
+                    detail:
+                      'Exemplos: "Torne o 3º parágrafo mais objetivo", "Adicione menção ao prazo de 30 dias", "Remova a menção à resolução X".',
+                  },
+                  {
+                    tip: "O texto da minuta também pode ser editado diretamente.",
+                    detail:
+                      "Além do chat, você pode clicar no texto e ajustar palavras ou frases manualmente antes de exportar.",
+                  },
+                  {
+                    tip: "O número da carta é obrigatório antes de exportar.",
+                    detail:
+                      "Digite apenas os 4 dígitos do número sequencial. O arquivo será nomeado automaticamente como: 0001 - GREG - 2026 - Assunto - RMC.docx",
+                  },
+                  {
+                    tip: "Documentos complementares são contexto, não conteúdo.",
+                    detail:
+                      "Notas técnicas e resoluções anexadas enriquecem a minuta indiretamente. A IA não os lista na carta — use-os para fundamentar argumentos.",
+                  },
+                  {
+                    tip: "O arquivo exportado já está no padrão visual Rumo.",
+                    detail:
+                      "Revise o conteúdo no Word, salve como PDF quando precisar da versão final para envio.",
+                  },
+                ].map((s, n) => (
+                  <div key={n} className="flex gap-2">
+                    <Lightbulb
+                      className="w-3.5 h-3.5 flex-shrink-0 mt-1"
+                      style={{ color: "hsl(204 76% 65%)" }}
+                    />
+                    <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
+                      <strong className="text-white">{s.tip}</strong> {s.detail}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <SecondaryButton onClick={() => goTo("modelos")}>
               <ArrowLeft className="w-4 h-4" /> Voltar ao início
             </SecondaryButton>
