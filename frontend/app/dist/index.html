@@ -22,5 +22,97 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- ARCA · Identificação do responsável (histórico) -------------------- -->
+    <!-- Adiciona um campo "Seu nome" e injeta o responsável no registro do    -->
+    <!-- histórico ao baixar a carta. Independente do bundle React.            -->
+    <script>
+    (function () {
+      var K_NOME = 'arca-responsavel', K_AREA = 'arca-area';
+      function get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+      function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+      // 1) Intercepta o export para injetar responsável/área dentro de meta
+      var origFetch = window.fetch;
+      window.fetch = function (url, opts) {
+        try {
+          var u = typeof url === 'string' ? url : (url && url.url) || '';
+          if (u.indexOf('/api/export/docx') !== -1 && opts && opts.method &&
+              String(opts.method).toUpperCase() === 'POST' &&
+              typeof opts.body === 'string') {
+            var nome = get(K_NOME), area = get(K_AREA);
+            if (nome || area) {
+              var body = JSON.parse(opts.body);
+              body.meta = body.meta || {};
+              if (nome && !body.meta.responsavel) body.meta.responsavel = nome;
+              if (area && !body.meta.area) body.meta.area = area;
+              opts = Object.assign({}, opts, { body: JSON.stringify(body) });
+            }
+          }
+        } catch (e) { /* silencioso — nunca quebra o export */ }
+        return origFetch.call(this, url, opts);
+      };
+
+      // 2) Widget flutuante para o usuário se identificar (uma vez por navegador)
+      function montarWidget() {
+        if (document.getElementById('arca-ident')) return;
+        var wrap = document.createElement('div');
+        wrap.id = 'arca-ident';
+        wrap.innerHTML =
+          '<style>' +
+          '#arca-ident{position:fixed;left:16px;bottom:16px;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}' +
+          '#arca-ident .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);padding:10px 12px;width:230px;}' +
+          '#arca-ident .tit{font-size:11px;font-weight:700;color:#00713c;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;display:flex;align-items:center;gap:6px;}' +
+          '#arca-ident input{width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;margin-bottom:6px;}' +
+          '#arca-ident input:focus{outline:2px solid #e6f2ec;border-color:#00713c;}' +
+          '#arca-ident .ok{font-size:11px;color:#00713c;height:12px;}' +
+          '#arca-ident .pill{background:#00713c;color:#fff;border-radius:20px;padding:7px 13px;font-size:13px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:7px;}' +
+          '</style>' +
+          '<div class="card" id="arca-card" style="display:none">' +
+            '<div class="tit">👤 Identificação</div>' +
+            '<input id="arca-nome" type="text" placeholder="Seu nome" />' +
+            '<input id="arca-area" type="text" placeholder="Sua área (opcional)" />' +
+            '<div class="ok" id="arca-ok"></div>' +
+          '</div>' +
+          '<div class="pill" id="arca-pill">👤 <span id="arca-pill-txt">Identifique-se</span></div>';
+        document.body.appendChild(wrap);
+
+        var card = document.getElementById('arca-card');
+        var pill = document.getElementById('arca-pill');
+        var pillTxt = document.getElementById('arca-pill-txt');
+        var inNome = document.getElementById('arca-nome');
+        var inArea = document.getElementById('arca-area');
+        var ok = document.getElementById('arca-ok');
+
+        inNome.value = get(K_NOME);
+        inArea.value = get(K_AREA);
+        atualizarPill();
+
+        function atualizarPill() {
+          var n = get(K_NOME);
+          pillTxt.textContent = n ? n : 'Identifique-se';
+        }
+        pill.onclick = function () {
+          card.style.display = card.style.display === 'none' ? 'block' : 'none';
+          if (card.style.display === 'block') inNome.focus();
+        };
+        function salvar() {
+          set(K_NOME, inNome.value.trim());
+          set(K_AREA, inArea.value.trim());
+          atualizarPill();
+          ok.textContent = 'Salvo ✓';
+          setTimeout(function () { ok.textContent = ''; }, 1500);
+        }
+        inNome.addEventListener('input', salvar);
+        inArea.addEventListener('input', salvar);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', montarWidget);
+      } else {
+        montarWidget();
+      }
+    })();
+    </script>
   </body>
 </html>
