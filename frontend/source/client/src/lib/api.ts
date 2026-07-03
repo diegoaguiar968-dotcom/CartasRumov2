@@ -144,6 +144,63 @@ export async function refinarMinuta(params: {
   return res.json();
 }
 
+// ── Histórico ──
+export interface HistoricoEntrada {
+  id: string;
+  criado_em: string;
+  titulo: string;
+  nome_arquivo: string;
+  responsavel: string;
+  area: string;
+  assuntos: string;
+  tema: string;
+  orgao: string;
+  malha: string;
+  oficio: string;
+  processo: string;
+  forma_envio: string;
+  modelo_id: string;
+  signatario_antt: string;
+  cargo_antt: string;
+  minuta?: string;
+}
+
+export async function getHistorico(
+  filtros: Record<string, string> = {}
+): Promise<{ success: boolean; historico: HistoricoEntrada[]; dbDesativado?: boolean }> {
+  const params = new URLSearchParams(
+    Object.entries(filtros).filter(([, v]) => v)
+  );
+  const res = await req(`/api/historico?${params}`);
+  return res.json();
+}
+
+export async function getHistoricoOpcoes(): Promise<{
+  success: boolean;
+  responsaveis: string[];
+  malhas: string[];
+  orgaos: string[];
+}> {
+  const res = await req("/api/historico/opcoes");
+  return res.json();
+}
+
+export async function getHistoricoDetalhe(
+  id: string
+): Promise<{ success: boolean; entrada: HistoricoEntrada }> {
+  const res = await req(`/api/historico/${id}`);
+  return res.json();
+}
+
+export async function excluirHistoricoEntrada(id: string): Promise<{ success: boolean }> {
+  const res = await req(`/api/historico/${id}`, { method: "DELETE" });
+  return res.json();
+}
+
+export function urlHistoricoDocx(id: string): string {
+  return `${API_BASE}/api/historico/${id}/docx`;
+}
+
 // ── Export ──
 export async function downloadDocx(
   numeroOficio: string,

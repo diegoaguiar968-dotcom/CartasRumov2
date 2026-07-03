@@ -53,8 +53,10 @@ app.use('/api/minuta', minutaRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/historico', historicoRoutes);
 
-// ─── Página do histórico (servida diretamente pelo backend) ───
-app.use('/historico', express.static(path.join(__dirname, 'public')));
+// ─── /historico: o histórico agora vive dentro do app (vagão 06) ───
+// Mantém o endereço antigo funcionando via redirect para o deep-link do frontend.
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://arcarumo.netlify.app';
+app.get('/historico', (_req, res) => res.redirect(302, `${FRONTEND_URL}/#/historico`));
 
 // ─── Catch-all 404 ───
 app.use((req, res) => {

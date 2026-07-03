@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Zap,
   Paperclip,
@@ -15,6 +15,11 @@ import {
   Lightbulb,
   ChevronDown,
   AlertTriangle,
+  Search,
+  Copy,
+  Trash2,
+  PencilLine,
+  RefreshCw,
 } from "lucide-react";
 import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
 import {
@@ -25,10 +30,16 @@ import {
   gerarCartaEspontanea,
   refinarMinuta,
   downloadDocx,
+  getHistorico,
+  getHistoricoOpcoes,
+  getHistoricoDetalhe,
+  excluirHistoricoEntrada,
+  urlHistoricoDocx,
   type Template,
   type Briefing,
   type MinutaMeta,
   type AiFeedback,
+  type HistoricoEntrada,
 } from "./lib/api";
 
 // ── Fallback caso a API de templates não responda ──
@@ -76,6 +87,7 @@ const STEPS_RESPOSTA = [
   { number: 3, key: "dados-resposta", label: "Dados da resposta" },
   { number: 4, key: "minuta", label: "Minuta gerada" },
   { number: 5, key: "ajuda", label: "Como usar" },
+  { number: 6, key: "historico", label: "Histórico" },
 ];
 
 const STEPS_ESPONTANEA = [
@@ -83,6 +95,25 @@ const STEPS_ESPONTANEA = [
   { number: 2, key: "dados-espontanea", label: "Dados da carta" },
   { number: 4, key: "minuta", label: "Minuta gerada" },
   { number: 5, key: "ajuda", label: "Como usar" },
+  { number: 6, key: "historico", label: "Histórico" },
+];
+
+// Campos do painel de detalhes — mesma ordem e rótulos da lista do SharePoint
+const CAMPOS_SHAREPOINT: { rot: string; chave: keyof HistoricoEntrada | null }[] = [
+  { rot: "Título", chave: "titulo" },
+  { rot: "Conferida?", chave: null },
+  { rot: "Responsável", chave: "responsavel" },
+  { rot: "Área do Responsável", chave: "area" },
+  { rot: "Data de Envio", chave: null },
+  { rot: "Assuntos", chave: "assuntos" },
+  { rot: "Tema", chave: "tema" },
+  { rot: "Órgão", chave: "orgao" },
+  { rot: "Malha", chave: "malha" },
+  { rot: "Ofício", chave: "oficio" },
+  { rot: "Dilação?", chave: null },
+  { rot: "Prazo com Dilação", chave: null },
+  { rot: "Forma de Envio", chave: "forma_envio" },
+  { rot: "Protocolo", chave: null },
 ];
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -185,7 +216,9 @@ function TextField({
 export default function App() {
   // ── Estado global do fluxo ──
   const [flowType, setFlowType] = useState<FlowType>(null);
-  const [activeStepKey, setActiveStepKey] = useState("modelos");
+  const [activeStepKey, setActiveStepKey] = useState(() =>
+    window.location.hash === "#/historico" ? "historico" : "modelos"
+  );
   const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
 
   // ── Etapa 1: templates ──
@@ -224,6 +257,21 @@ export default function App() {
   const [exportando, setExportando] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<AiFeedback | null>(null);
   const [feedbackAberto, setFeedbackAberto] = useState(true);
+
+  // ── Vagão Histórico ──
+  const [histEntradas, setHistEntradas] = useState<HistoricoEntrada[]>([]);
+  const [histCarregando, setHistCarregando] = useState(false);
+  const [histDbOff, setHistDbOff] = useState(false);
+  const [histBusca, setHistBusca] = useState("");
+  const [histFiltroResp, setHistFiltroResp] = useState("");
+  const [histFiltroMalha, setHistFiltroMalha] = useState("");
+  const [histOpcoes, setHistOpcoes] = useState<{ responsaveis: string[]; malhas: string[] }>({
+    responsaveis: [],
+    malhas: [],
+  });
+  const [histDetalhe, setHistDetalhe] = useState<HistoricoEntrada | null>(null);
+  const [histMinutaAberta, setHistMinutaAberta] = useState(false);
+  const [copiado, setCopiado] = useState<string | null>(null);
 
   const steps = flowType === "espontanea" ? STEPS_ESPONTANEA : STEPS_RESPOSTA;
 
@@ -377,6 +425,97 @@ export default function App() {
       return next;
     });
   }
+
+  // ── Histórico: carga, filtros e ações ──
+  const carregarHistorico = useCallback(async () => {
+    setHistCarregando(true);
+    try {
+      const r = await getHistorico({
+        q: histBusca.trim(),
+        responsavel: histFiltroResp,
+        malha: histFiltroMalha,
+      });
+      setHistDbOff(!!r.dbDesativado);
+      setHistEntradas(r.historico || []);
+    } catch {
+      setHistEntradas([]);
+    } finally {
+      setHistCarregando(false);
+    }
+  }, [histBusca, histFiltroResp, histFiltroMalha]);
+
+  useEffect(() => {
+    if (activeStepKey !== "historico") return;
+    carregarHistorico();
+    getHistoricoOpcoes()
+      .then((r) => setHistOpcoes({ responsaveis: r.responsaveis || [], malhas: r.malhas || [] }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStepKey]);
+
+  async function abrirDetalheHistorico(id: string) {
+    try {
+      const r = await getHistoricoDetalhe(id);
+      setHistDetalhe(r.entrada);
+      setHistMinutaAberta(false);
+    } catch {
+      alert("Não foi possível carregar os detalhes.");
+    }
+  }
+
+  async function excluirDoHistorico(id: string) {
+    if (!confirm("Excluir esta entrada do histórico? Esta ação não pode ser desfeita.")) return;
+    try {
+      await excluirHistoricoEntrada(id);
+      setHistDetalhe(null);
+      carregarHistorico();
+    } catch {
+      alert("Erro ao excluir.");
+    }
+  }
+
+  function copiarTexto(chaveUi: string, texto: string) {
+    navigator.clipboard.writeText(texto).then(() => {
+      setCopiado(chaveUi);
+      setTimeout(() => setCopiado(null), 1200);
+    });
+  }
+
+  function copiarTudoHistorico(e: HistoricoEntrada) {
+    const linhas = CAMPOS_SHAREPOINT.map(
+      (c) => `${c.rot}: ${c.chave ? String(e[c.chave] ?? "") : ""}`
+    );
+    copiarTexto("tudo", linhas.join("\n"));
+  }
+
+  // Reabre uma carta do histórico na etapa de minuta para edição/refinamento
+  function reabrirDoHistorico(e: HistoricoEntrada) {
+    const siglas = (e.malha || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const keys = MALHA_OPTIONS.filter((m) => siglas.includes(m.sigla)).map((m) => m.key);
+    setMinutaTexto(e.minuta || "");
+    setMinutaMeta({
+      signatarioAntt: e.signatario_antt || "",
+      cargoAntt: e.cargo_antt || "",
+      malha: keys.join(","),
+      assunto: e.tema || "",
+      processo: e.processo || "",
+      referencia: e.oficio || "",
+      modeloId: e.modelo_id || "objetiva",
+    });
+    setMalhasSelecionadas(new Set(keys));
+    setNumeroCarta((e.titulo || "").split("/")[0] || "0001");
+    setAiFeedback(null);
+    setHistorico([]);
+    setHistDetalhe(null);
+    markCompleted("modelos");
+    goTo("minuta");
+  }
+
+  const fmtDataHistorico = (iso: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return d.toLocaleDateString("pt-BR");
+  };
 
   const nomeArquivoPreview = () => {
     const ano = new Date().getFullYear();
@@ -1268,18 +1407,24 @@ export default function App() {
                   <div>
                     <p className="font-semibold text-white text-sm mb-0.5">Histórico de cartas da equipe</p>
                     <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--text-muted))" }}>
-                      Toda carta exportada fica registrada no{" "}
-                      <a
-                        href={`${(window as any).API_URL || ""}/historico`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: "hsl(var(--primary))", textDecoration: "underline" }}
+                      Toda carta exportada fica registrada no vagão{" "}
+                      <button
+                        onClick={() => goTo("historico")}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          color: "hsl(var(--primary))",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          font: "inherit",
+                        }}
                       >
-                        histórico compartilhado
-                      </a>
-                      , com filtros por responsável, malha e período. Em "Ver detalhes" os campos aparecem
+                        Histórico
+                      </button>
+                      , com filtros por responsável, malha e busca livre. Nos detalhes, os campos aparecem
                       na mesma ordem da lista do SharePoint, prontos para copiar — e é possível baixar
-                      novamente o .docx de qualquer carta já gerada.
+                      novamente o .docx ou reabrir qualquer carta para edição.
                     </p>
                   </div>
                 </div>
@@ -1343,6 +1488,255 @@ export default function App() {
             <SecondaryButton onClick={() => goTo("modelos")}>
               <ArrowLeft className="w-4 h-4" /> Voltar ao início
             </SecondaryButton>
+          </div>
+        )}
+
+        {/* ═══════ ETAPA 6 — Histórico ═══════ */}
+        {activeStepKey === "historico" && (
+          <div className="space-y-4">
+            <InfoCard title="Histórico de cartas da equipe">
+              Registro compartilhado de todas as cartas geradas. Clique numa carta para ver os campos
+              prontos para copiar na lista do SharePoint, baixar o .docx novamente ou reabri-la para
+              edição.
+            </InfoCard>
+
+            {histDbOff && (
+              <div
+                className="info-card"
+                style={{ borderColor: "hsl(38 85% 60% / 0.4)" }}
+              >
+                <p style={{ color: "hsl(38 85% 70%)", fontSize: "13px" }}>
+                  O banco de dados do histórico não está configurado no servidor (variável DATABASE_URL).
+                </p>
+              </div>
+            )}
+
+            {/* Filtros */}
+            <div className="info-card flex flex-wrap items-end gap-3">
+              <div className="flex-1" style={{ minWidth: "200px" }}>
+                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                  Buscar
+                </label>
+                <input
+                  value={histBusca}
+                  onChange={(e) => setHistBusca(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && carregarHistorico()}
+                  placeholder="título, tema, ofício, processo…"
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{
+                    background: "hsl(var(--surface-app))",
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--text-primary))",
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                  Responsável
+                </label>
+                <select
+                  value={histFiltroResp}
+                  onChange={(e) => setHistFiltroResp(e.target.value)}
+                  className="px-3 py-2 rounded-lg text-sm"
+                  style={{
+                    background: "hsl(var(--surface-app))",
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--text-primary))",
+                    minWidth: "150px",
+                  }}
+                >
+                  <option value="">Todos</option>
+                  {histOpcoes.responsaveis.map((r) => (
+                    <option key={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                  Malha
+                </label>
+                <select
+                  value={histFiltroMalha}
+                  onChange={(e) => setHistFiltroMalha(e.target.value)}
+                  className="px-3 py-2 rounded-lg text-sm"
+                  style={{
+                    background: "hsl(var(--surface-app))",
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--text-primary))",
+                    minWidth: "110px",
+                  }}
+                >
+                  <option value="">Todas</option>
+                  {histOpcoes.malhas.map((m) => (
+                    <option key={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <PrimaryButton onClick={carregarHistorico} loading={histCarregando}>
+                <Search className="w-4 h-4" /> Filtrar
+              </PrimaryButton>
+            </div>
+
+            {/* Painel de detalhes (quando uma carta está aberta) */}
+            {histDetalhe && (
+              <div className="info-card" style={{ borderColor: "hsl(var(--primary) / 0.5)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-white text-sm">{histDetalhe.titulo}</p>
+                  <button
+                    onClick={() => setHistDetalhe(null)}
+                    style={{ background: "none", border: "none", color: "hsl(var(--text-muted))", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="space-y-0">
+                  {CAMPOS_SHAREPOINT.map((c) => {
+                    const val = c.chave ? String(histDetalhe[c.chave] ?? "") : "";
+                    const vazio = !val;
+                    return (
+                      <div
+                        key={c.rot}
+                        className="flex items-start gap-2 py-1.5"
+                        style={{ borderBottom: "1px solid hsl(var(--border) / 0.35)", fontSize: "13px" }}
+                      >
+                        <span style={{ width: "160px", flexShrink: 0, color: "hsl(var(--text-muted))", fontSize: "12px", fontWeight: 600, paddingTop: "1px" }}>
+                          {c.rot}
+                        </span>
+                        <span className="flex-1" style={{ color: vazio ? "hsl(var(--text-muted) / 0.6)" : "hsl(var(--text-secondary))", fontStyle: vazio ? "italic" : "normal", wordBreak: "break-word" }}>
+                          {vazio ? "(preencher no SharePoint)" : val}
+                        </span>
+                        {!vazio && (
+                          <button
+                            onClick={() => copiarTexto(c.rot, val)}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs flex-shrink-0"
+                            style={{
+                              background: "none",
+                              border: `1px solid ${copiado === c.rot ? "hsl(var(--rumo-green))" : "hsl(var(--border))"}`,
+                              color: copiado === c.rot ? "hsl(var(--rumo-green))" : "hsl(var(--text-muted))",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {copiado === c.rot ? "✓" : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {histMinutaAberta && (
+                  <div
+                    className="mt-3 p-3 rounded-lg text-sm"
+                    style={{
+                      background: "hsl(var(--surface-app))",
+                      border: "1px solid hsl(var(--border))",
+                      color: "hsl(var(--text-secondary))",
+                      whiteSpace: "pre-wrap",
+                      lineHeight: "1.6",
+                      maxHeight: "300px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {histDetalhe.minuta || "(minuta não disponível)"}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <SecondaryButton onClick={() => setHistMinutaAberta((v) => !v)}>
+                    {histMinutaAberta ? "Ocultar minuta" : "Ver minuta"}
+                  </SecondaryButton>
+                  <SecondaryButton onClick={() => copiarTudoHistorico(histDetalhe)}>
+                    <Copy className="w-4 h-4" /> {copiado === "tudo" ? "Copiado ✓" : "Copiar tudo"}
+                  </SecondaryButton>
+                  <SecondaryButton onClick={() => (window.location.href = urlHistoricoDocx(histDetalhe.id))}>
+                    <Download className="w-4 h-4" /> Baixar .docx
+                  </SecondaryButton>
+                  <PrimaryButton onClick={() => reabrirDoHistorico(histDetalhe)}>
+                    <PencilLine className="w-4 h-4" /> Reabrir para edição
+                  </PrimaryButton>
+                  <button
+                    onClick={() => excluirDoHistorico(histDetalhe.id)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold"
+                    style={{
+                      background: "transparent",
+                      color: "hsl(var(--destructive))",
+                      border: "1px solid hsl(var(--destructive) / 0.4)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" /> Excluir
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista */}
+            {histCarregando ? (
+              <div className="info-card flex items-center gap-3">
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: "hsl(var(--primary))" }} />
+                <span className="text-sm" style={{ color: "hsl(var(--text-secondary))" }}>
+                  Carregando histórico…
+                </span>
+              </div>
+            ) : histEntradas.length === 0 && !histDbOff ? (
+              <div className="info-card">
+                <p className="text-sm" style={{ color: "hsl(var(--text-muted))" }}>
+                  Nenhuma carta encontrada.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs px-1" style={{ color: "hsl(var(--text-muted))" }}>
+                  {histEntradas.length} carta{histEntradas.length !== 1 ? "s" : ""}
+                </p>
+                {histEntradas.map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => abrirDetalheHistorico(e.id)}
+                    className="info-card w-full text-left flex items-center gap-3 transition-all"
+                    style={{
+                      padding: "12px 16px",
+                      borderColor:
+                        histDetalhe?.id === e.id ? "hsl(var(--primary))" : "hsl(var(--border))",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span className="font-semibold text-white text-sm" style={{ minWidth: "125px" }}>
+                      {e.titulo}
+                    </span>
+                    {e.malha && (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                        style={{ background: "hsl(var(--primary) / 0.12)", color: "hsl(var(--primary))" }}
+                      >
+                        {e.malha}
+                      </span>
+                    )}
+                    <span
+                      className="flex-1 text-sm truncate"
+                      style={{ color: "hsl(var(--text-muted))" }}
+                    >
+                      {e.tema}
+                    </span>
+                    <span className="text-xs flex-shrink-0" style={{ color: "hsl(var(--text-secondary))" }}>
+                      {e.responsavel || "—"}
+                    </span>
+                    <span className="text-xs flex-shrink-0" style={{ color: "hsl(var(--text-muted))" }}>
+                      {fmtDataHistorico(e.criado_em)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-between pt-2">
+              <SecondaryButton onClick={() => goTo("modelos")}>
+                <ArrowLeft className="w-4 h-4" /> Voltar ao início
+              </SecondaryButton>
+              <SecondaryButton onClick={carregarHistorico}>
+                <RefreshCw className="w-4 h-4" /> Atualizar
+              </SecondaryButton>
+            </div>
           </div>
         )}
       </main>
