@@ -18,7 +18,7 @@ const { requestLogger } = require('./middleware/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { sessionMiddleware } = require('./middleware/session');
 const { carregarTemplatesFixos } = require('./services/templateService');
-const { modelosPermanentes } = require('./services/store');
+const { modelosPermanentes, initSessionsTable } = require('./services/store');
 const { initDb } = require('./services/db');
 
 const app = express();
@@ -71,8 +71,9 @@ app.use(errorHandler);
 
 // ─── Inicializar ───
 async function iniciar() {
-  // Inicializa o banco de dados do histórico (no-op se DATABASE_URL ausente)
+  // Inicializa o banco de dados do histórico e das sessões (no-op se DATABASE_URL ausente)
   await initDb();
+  await initSessionsTable();
 
   // Carrega os modelos DOCX fixos antes de aceitar requisições
   const templates = await carregarTemplatesFixos();
