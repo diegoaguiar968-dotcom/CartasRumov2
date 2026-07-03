@@ -36,7 +36,7 @@ import {
   getHistoricoOpcoes,
   getHistoricoDetalhe,
   excluirHistoricoEntrada,
-  urlHistoricoDocx,
+  baixarHistoricoDocx,
   getProximoNumero,
   numeroJaExiste,
   type Template,
@@ -1743,7 +1743,16 @@ export default function App() {
                   <SecondaryButton onClick={() => copiarTudoHistorico(histDetalhe)}>
                     <Copy className="w-4 h-4" /> {copiado === "tudo" ? "Copiado ✓" : "Copiar tudo"}
                   </SecondaryButton>
-                  <SecondaryButton onClick={() => (window.location.href = urlHistoricoDocx(histDetalhe.id))}>
+                  <SecondaryButton
+                    onClick={async () => {
+                      try {
+                        const nome = await baixarHistoricoDocx(histDetalhe.id);
+                        toast({ description: `Baixado: ${nome}` });
+                      } catch (e: any) {
+                        notificarErro(e.message || "Erro ao baixar o arquivo.");
+                      }
+                    }}
+                  >
                     <Download className="w-4 h-4" /> Baixar .docx
                   </SecondaryButton>
                   <PrimaryButton onClick={() => reabrirDoHistorico(histDetalhe)}>

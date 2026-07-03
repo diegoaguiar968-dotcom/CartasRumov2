@@ -10,6 +10,8 @@ export function getSessionId(): string {
   return id;
 }
 
+const APP_KEY = (window as any).APP_KEY || "";
+
 async function req(path: string, opts: RequestInit = {}) {
   const isForm = opts.body instanceof FormData;
   const res = await fetch(`${API_BASE}${path}`, {
@@ -17,6 +19,7 @@ async function req(path: string, opts: RequestInit = {}) {
     headers: {
       ...(isForm ? {} : { "Content-Type": "application/json" }),
       "X-Session-ID": getSessionId(),
+      ...(APP_KEY ? { "X-App-Key": APP_KEY } : {}),
       ...(opts.headers || {}),
     },
   });
@@ -206,8 +209,22 @@ export async function excluirHistoricoEntrada(id: string): Promise<{ success: bo
   return res.json();
 }
 
-export function urlHistoricoDocx(id: string): string {
-  return `${API_BASE}/api/historico/${id}/docx`;
+// Baixa o .docx de uma entrada do histórico via fetch+blob, para carregar os
+// headers (X-Session-ID / X-App-Key) — navegação direta não os enviaria.
+export async function baixarHistoricoDocx(id: string): Promise<string> {
+  const res = await req(`/api/historico/${id}/docx`);
+  const blob = await res.blob();
+  const nome =
+    res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] || "carta.docx";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return nome;
 }
 
 export async function getProximoNumero(): Promise<{

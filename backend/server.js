@@ -17,6 +17,7 @@ const historicoRoutes = require('./routes/historico');
 const { requestLogger } = require('./middleware/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { sessionMiddleware } = require('./middleware/session');
+const { apiKeyMiddleware } = require('./middleware/apiKey');
 const { carregarTemplatesFixos } = require('./services/templateService');
 const { modelosPermanentes, initSessionsTable } = require('./services/store');
 const { initDb } = require('./services/db');
@@ -30,11 +31,34 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// ─── CORS ───
+// Se ALLOWED_ORIGINS (lista separada por vírgula) estiver definida, restringe
+// aos domínios do frontend; caso contrário, mantém o comportamento aberto atual.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  exposedHeaders: ['Content-Disposition'],
+  allowedHeaders: ['Content-Type', 'X-Session-ID', 'X-App-Key'],
+  origin: allowedOrigins.length
+    ? (origin, cb) => {
+        // requisições sem Origin (curl, health checks) são permitidas
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        return cb(new Error('Origem não permitida pelo CORS'));
+      }
+    : true,
+};
+
 // ─── Middleware Global ───
-app.use(cors({ exposedHeaders: ['Content-Disposition'] }));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
 app.use(sessionMiddleware);
+
+// ─── Chave de aplicação (protege /api/*; desativada se APP_KEY não definida) ───
+app.use('/api', apiKeyMiddleware);
 
 // ─── Rotas ───
 app.get('/api/status', (req, res) => {
