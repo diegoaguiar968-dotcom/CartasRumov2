@@ -22,6 +22,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
+import { Toaster } from "./components/ui/toaster";
+import { useToast } from "./hooks/use-toast";
 import {
   getTemplates,
   uploadOficio,
@@ -216,6 +218,34 @@ function TextField({
 }
 
 export default function App() {
+  const { toast } = useToast();
+  const notificarErro = useCallback(
+    (msg: string) => toast({ variant: "destructive", title: "Ops", description: msg }),
+    [toast]
+  );
+
+  // Modal de confirmação (substitui window.confirm, no estilo do app)
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    titulo: string;
+    descricao: string;
+    perigo?: boolean;
+    rotuloOk?: string;
+    resolve?: (v: boolean) => void;
+  }>({ open: false, titulo: "", descricao: "" });
+
+  const confirmar = useCallback(
+    (opts: { titulo: string; descricao: string; perigo?: boolean; rotuloOk?: string }) =>
+      new Promise<boolean>((resolve) => setConfirmState({ open: true, ...opts, resolve })),
+    []
+  );
+  const responderConfirm = useCallback((v: boolean) => {
+    setConfirmState((s) => {
+      s.resolve?.(v);
+      return { ...s, open: false };
+    });
+  }, []);
+
   // ── Estado global do fluxo ──
   const [flowType, setFlowType] = useState<FlowType>(null);
   const [activeStepKey, setActiveStepKey] = useState(() =>
@@ -333,7 +363,7 @@ export default function App() {
       markCompleted("oficio");
       goTo("dados-resposta");
     } catch (e: any) {
-      alert(e.message || "Erro ao processar ofício.");
+      notificarErro(e.message || "Erro ao processar ofício.");
     } finally {
       setUploadingOficio(false);
     }
@@ -357,7 +387,7 @@ export default function App() {
       markCompleted("dados-resposta");
       goTo("minuta");
     } catch (e: any) {
-      alert(e.message || "Erro ao gerar minuta.");
+      notificarErro(e.message || "Erro ao gerar minuta.");
     } finally {
       setGerandoMinuta(false);
     }
@@ -386,7 +416,7 @@ export default function App() {
       markCompleted("dados-espontanea");
       goTo("minuta");
     } catch (e: any) {
-      alert(e.message || "Erro ao gerar carta.");
+      notificarErro(e.message || "Erro ao gerar carta.");
     } finally {
       setGerandoMinuta(false);
     }
@@ -411,7 +441,7 @@ export default function App() {
       ]);
       setRefinamentoMsg("");
     } catch (e: any) {
-      alert(e.message || "Erro ao refinar minuta.");
+      notificarErro(e.message || "Erro ao refinar minuta.");
     } finally {
       setRefinando(false);
     }
@@ -424,11 +454,12 @@ export default function App() {
       // Mitigação de colisão: alguém pode ter usado o número entre a sugestão e o download
       try {
         if (await numeroJaExiste(numeroCarta)) {
-          const ok = confirm(
-            `O número ${numeroCarta.padStart(4, "0")} já consta no histórico deste ano ` +
-              `(pode ter sido usado por outro colega ou ser uma reemissão desta carta).\n\n` +
-              `Deseja usar este número mesmo assim?`
-          );
+          const ok = await confirmar({
+            titulo: `Número ${numeroCarta.padStart(4, "0")} já usado`,
+            descricao:
+              "Este número já consta no histórico deste ano (pode ter sido usado por outro colega ou ser uma reemissão desta carta). Deseja usar este número mesmo assim?",
+            rotuloOk: "Usar mesmo assim",
+          });
           if (!ok) {
             setExportando(false);
             return;
@@ -438,13 +469,14 @@ export default function App() {
         /* verificação indisponível — segue o download normalmente */
       }
       const { responsavel, area } = getResponsavel();
-      await downloadDocx(numeroCarta, minutaTexto, {
+      const nome = await downloadDocx(numeroCarta, minutaTexto, {
         ...minutaMeta,
         responsavel,
         area,
       });
+      toast({ description: `Carta baixada: ${nome}` });
     } catch (e: any) {
-      alert(e.message || "Erro ao gerar DOCX.");
+      notificarErro(e.message || "Erro ao gerar DOCX.");
     } finally {
       setExportando(false);
     }
@@ -492,18 +524,25 @@ export default function App() {
       setHistDetalhe(r.entrada);
       setHistMinutaAberta(false);
     } catch {
-      alert("Não foi possível carregar os detalhes.");
+      notificarErro("Não foi possível carregar os detalhes.");
     }
   }
 
   async function excluirDoHistorico(id: string) {
-    if (!confirm("Excluir esta entrada do histórico? Esta ação não pode ser desfeita.")) return;
+    const ok = await confirmar({
+      titulo: "Excluir do histórico?",
+      descricao: "Esta ação não pode ser desfeita.",
+      perigo: true,
+      rotuloOk: "Excluir",
+    });
+    if (!ok) return;
     try {
       await excluirHistoricoEntrada(id);
       setHistDetalhe(null);
       carregarHistorico();
+      toast({ description: "Entrada excluída do histórico." });
     } catch {
-      alert("Erro ao excluir.");
+      notificarErro("Erro ao excluir.");
     }
   }
 
@@ -1792,6 +1831,61 @@ export default function App() {
       </main>
 
       <IdentifyWidget />
+      <Toaster />
+
+      {/* ── Modal de confirmação (substitui window.confirm) ── */}
+      {confirmState.open && (
+        <div
+          onClick={() => responderConfirm(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "hsl(210 100% 4% / 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            padding: "16px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="arca-fade"
+            style={{
+              background: "hsl(var(--surface-card))",
+              border: "1px solid hsl(var(--border))",
+              borderRadius: "12px",
+              maxWidth: "420px",
+              width: "100%",
+              padding: "22px",
+              boxShadow: "0 20px 50px hsl(210 100% 4% / 0.5)",
+            }}
+          >
+            <p className="font-semibold text-white text-[15px] mb-1">{confirmState.titulo}</p>
+            <p className="text-sm mb-5" style={{ color: "hsl(var(--text-muted))", lineHeight: 1.6 }}>
+              {confirmState.descricao}
+            </p>
+            <div className="flex justify-end gap-2">
+              <SecondaryButton onClick={() => responderConfirm(false)}>Cancelar</SecondaryButton>
+              <button
+                onClick={() => responderConfirm(true)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold"
+                style={{
+                  background: confirmState.perigo
+                    ? "hsl(var(--destructive))"
+                    : "hsl(var(--primary))",
+                  color: confirmState.perigo
+                    ? "hsl(var(--destructive-foreground))"
+                    : "hsl(var(--primary-foreground))",
+                  cursor: "pointer",
+                }}
+              >
+                {confirmState.rotuloOk || "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
