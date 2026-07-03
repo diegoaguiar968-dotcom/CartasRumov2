@@ -122,7 +122,7 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   return (
     <div className="info-card">
       <h2 className="font-semibold text-white text-[15px] mb-1">{title}</h2>
-      <div style={{ color: "hsl(var(--text-muted))", fontSize: "13px", lineHeight: "1.6" }}>{children}</div>
+      <div style={{ color: "hsl(var(--text-muted))", fontSize: "13.5px", lineHeight: "1.6" }}>{children}</div>
     </div>
   );
 }
@@ -596,8 +596,9 @@ export default function App() {
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto px-6 py-8 w-full">
-        {/* ── Stepper ferroviário: vagões sobre trilhos ── */}
-        <div className="relative mb-10" style={{ minHeight: "105px" }}>
+        {/* ── Stepper ferroviário: vagões sobre trilhos (rola em telas estreitas) ── */}
+        <div className="mb-10 rail-scroll" style={{ paddingBottom: "4px" }}>
+         <div className="relative rail-wagons" style={{ minHeight: "105px" }}>
           {/* Trilhos com dormentes */}
           <div
             style={{
@@ -782,8 +783,10 @@ export default function App() {
               );
             })}
           </div>
+         </div>
         </div>
 
+        <div key={activeStepKey} className="arca-fade">
         {/* ═══════ ETAPA 1 — Modelos/Templates ═══════ */}
         {activeStepKey === "modelos" && (
           <div className="space-y-4">
@@ -799,10 +802,13 @@ export default function App() {
                 <button
                   key={tpl.id}
                   onClick={() => setSelectedTemplate(tpl.id)}
-                  className="info-card w-full text-left transition-all flex items-start gap-4"
+                  aria-pressed={selected}
+                  className={`info-card card-clickable w-full text-left flex items-start gap-4 ${
+                    selected ? "is-selected" : ""
+                  }`}
                   style={{
                     borderColor: selected ? "hsl(var(--primary))" : "hsl(var(--border))",
-                    background: selected ? "hsl(var(--primary) / 0.08)" : "hsl(var(--surface-card))",
+                    background: selected ? "hsl(var(--primary) / 0.1)" : "hsl(var(--surface-card))",
                   }}
                 >
                   <div
@@ -817,11 +823,7 @@ export default function App() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="font-semibold text-white text-sm">{tpl.nome}</span>
-                      {selected && (
-                        <span className="text-xs font-medium" style={{ color: "hsl(var(--rumo-green))" }}>
-                          ● selecionado
-                        </span>
-                      )}
+                      {selected && <span className="badge-active">selecionado</span>}
                     </div>
                     <p style={{ color: "hsl(var(--text-muted))", fontSize: "13px", lineHeight: "1.5" }}>
                       {tpl.descricao}
@@ -1264,10 +1266,10 @@ export default function App() {
 
         {/* ═══════ ETAPA 5 — Como usar ═══════ */}
         {activeStepKey === "ajuda" && (
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div className="info-card">
               <h2 className="font-semibold text-white text-[15px] mb-1">Como usar o ARCA</h2>
-              <p style={{ color: "hsl(var(--text-muted))", fontSize: "13px", lineHeight: "1.6" }}>
+              <p style={{ color: "hsl(var(--text-muted))", fontSize: "13.5px", lineHeight: "1.6" }}>
                 A ferramenta opera em dois modos:{" "}
                 <strong className="text-white">Carta Resposta</strong> (quando a ANTT envia um ofício
                 solicitando informações) e <strong className="text-white">Carta Espontânea</strong>{" "}
@@ -1738,7 +1740,9 @@ export default function App() {
                   <button
                     key={e.id}
                     onClick={() => abrirDetalheHistorico(e.id)}
-                    className="info-card w-full text-left flex items-center gap-3 transition-all"
+                    className={`info-card card-clickable w-full text-left flex items-center gap-3 ${
+                      histDetalhe?.id === e.id ? "is-selected" : ""
+                    }`}
                     style={{
                       padding: "12px 16px",
                       borderColor:
@@ -1784,6 +1788,7 @@ export default function App() {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       <IdentifyWidget />

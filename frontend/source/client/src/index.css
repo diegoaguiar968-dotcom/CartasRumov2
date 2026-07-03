@@ -48,10 +48,10 @@
   --rumo-green: 164 68% 41%;
   --rumo-green-light: 127 64% 65%;
 
-  /* Text */
+  /* Text — luminância ajustada para WCAG AA sobre os cards (contraste ≥ 4.5:1) */
   --text-primary: 0 0% 98%;
-  --text-secondary: 210 15% 75%;
-  --text-muted: 210 15% 55%;
+  --text-secondary: 210 16% 80%;
+  --text-muted: 210 14% 64%;
 
   /* Status */
   --status-active: 127 64% 65%;
@@ -77,11 +77,54 @@ html {
 body {
   min-height: 100dvh;
   font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
   background-color: hsl(var(--surface-app));
   color: hsl(var(--text-primary));
 }
 
 button { cursor: pointer; }
+
+/* ─── Acessibilidade: foco visível de teclado (WCAG 2.4.7) ─────────── */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Card clicável: hover/foco sóbrios (template, histórico) ──────── */
+.card-clickable {
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.card-clickable:hover {
+  border-color: hsl(var(--primary) / 0.45) !important;
+  background: hsl(var(--surface-hover)) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px hsl(210 100% 4% / 0.4);
+}
+/* Card já selecionado: mantém o destaque, sem o cinza do hover */
+.card-clickable.is-selected:hover {
+  background: hsl(var(--primary) / 0.1) !important;
+}
+
+/* ─── Microinteração: fade curto na troca de etapa/painéis ────────── */
+@keyframes arca-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.arca-fade { animation: arca-fade-in 0.2s ease; }
+
+/* ─── Trilho de vagões: rolagem horizontal em telas estreitas ─────── */
+.rail-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 720px) {
+  .rail-wagons { min-width: 620px; }
+}
 
 /* ─── Rumo Custom Components ────────────────────────────────────── */
 
