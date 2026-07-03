@@ -128,10 +128,9 @@ async function gerarDocxBuffer(dados) {
       }
     );
 
-    docXml = docXml.replace(
-      '<w:r><w:t>Prezada</w:t></w:r><w:r w:rsidR="00B66443"><w:t xml:space="preserve"> </w:t></w:r><w:r w:rsidR="00FC1687"><w:t>Senhor</w:t></w:r><w:r><w:t>a</w:t></w:r><w:r w:rsidR="00B66443"><w:t>,</w:t></w:r>',
-      '<w:r><w:t>{saudacao}</w:t></w:r>'
-    );
+    // A saudação já é um placeholder {saudacao} no próprio template
+    // (baked em 3-modelo-anexos.docx) — o docxtemplater a preenche
+    // nativamente no render(), sem substituição frágil de runs.
 
     zip.file('word/document.xml', docXml);
 
