@@ -166,10 +166,19 @@ export interface HistoricoEntrada {
 }
 
 export async function getHistorico(
-  filtros: Record<string, string> = {}
-): Promise<{ success: boolean; historico: HistoricoEntrada[]; dbDesativado?: boolean }> {
+  filtros: Record<string, string | number> = {}
+): Promise<{
+  success: boolean;
+  historico: HistoricoEntrada[];
+  total?: number;
+  offset?: number;
+  limit?: number;
+  dbDesativado?: boolean;
+}> {
   const params = new URLSearchParams(
-    Object.entries(filtros).filter(([, v]) => v)
+    Object.entries(filtros)
+      .filter(([, v]) => v !== "" && v !== undefined && v !== null)
+      .map(([k, v]) => [k, String(v)])
   );
   const res = await req(`/api/historico?${params}`);
   return res.json();

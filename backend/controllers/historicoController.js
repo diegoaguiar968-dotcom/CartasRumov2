@@ -43,16 +43,21 @@ async function salvarHistorico(dados) {
 }
 
 /**
- * GET /api/historico — lista com filtros opcionais.
- * Query params: q (busca livre), responsavel, malha, orgao, de (data ISO), ate (data ISO)
+ * GET /api/historico — lista paginada com filtros opcionais.
+ * Query params: q (busca livre), responsavel, malha, orgao, de, ate (ISO),
+ *               limit (padrão 50, máx 200), offset (padrão 0).
+ * Retorna { historico, total, offset, limit } para paginação incremental.
  */
 async function listarHistorico(req, res, next) {
   try {
     if (!isEnabled()) {
-      return res.json({ success: true, historico: [], dbDesativado: true });
+      return res.json({ success: true, historico: [], total: 0, dbDesativado: true });
     }
 
     const { q, responsavel, malha, orgao, de, ate } = req.query;
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
     const cond = [];
     const params = [];
 
@@ -68,6 +73,10 @@ async function listarHistorico(req, res, next) {
     if (ate)         { params.push(ate);          cond.push(`criado_em <= $${params.length}`); }
 
     const where = cond.length ? `WHERE ${cond.join(' AND ')}` : '';
+
+    const totalRes = await query(`SELECT COUNT(*)::int AS total FROM historico ${where}`, params);
+    const total = totalRes.rows[0]?.total || 0;
+
     // Lista não retorna a minuta completa (economia de payload)
     const { rows } = await query(
       `SELECT id, criado_em, titulo, nome_arquivo, responsavel, area, assuntos,
@@ -75,11 +84,11 @@ async function listarHistorico(req, res, next) {
               signatario_antt, cargo_antt
        FROM historico ${where}
        ORDER BY criado_em DESC
-       LIMIT 500`,
-      params
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
 
-    res.json({ success: true, historico: rows });
+    res.json({ success: true, historico: rows, total, offset, limit });
   } catch (err) {
     next(err);
   }

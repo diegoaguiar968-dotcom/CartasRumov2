@@ -317,6 +317,8 @@ export default function App() {
   const [histDetalhe, setHistDetalhe] = useState<HistoricoEntrada | null>(null);
   const [histMinutaAberta, setHistMinutaAberta] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [histTotal, setHistTotal] = useState(0);
+  const HIST_PAGINA = 50;
 
   const steps = flowType === "espontanea" ? STEPS_ESPONTANEA : STEPS_RESPOSTA;
 
@@ -491,23 +493,30 @@ export default function App() {
     });
   }
 
-  // ── Histórico: carga, filtros e ações ──
-  const carregarHistorico = useCallback(async () => {
-    setHistCarregando(true);
-    try {
-      const r = await getHistorico({
-        q: histBusca.trim(),
-        responsavel: histFiltroResp,
-        malha: histFiltroMalha,
-      });
-      setHistDbOff(!!r.dbDesativado);
-      setHistEntradas(r.historico || []);
-    } catch {
-      setHistEntradas([]);
-    } finally {
-      setHistCarregando(false);
-    }
-  }, [histBusca, histFiltroResp, histFiltroMalha]);
+  // ── Histórico: carga paginada, filtros e ações ──
+  const carregarHistorico = useCallback(
+    async (append = false) => {
+      setHistCarregando(true);
+      try {
+        const offset = append ? histEntradas.length : 0;
+        const r = await getHistorico({
+          q: histBusca.trim(),
+          responsavel: histFiltroResp,
+          malha: histFiltroMalha,
+          limit: HIST_PAGINA,
+          offset,
+        });
+        setHistDbOff(!!r.dbDesativado);
+        setHistTotal(r.total ?? (r.historico || []).length);
+        setHistEntradas((prev) => (append ? [...prev, ...(r.historico || [])] : r.historico || []));
+      } catch {
+        if (!append) setHistEntradas([]);
+      } finally {
+        setHistCarregando(false);
+      }
+    },
+    [histBusca, histFiltroResp, histFiltroMalha, histEntradas.length]
+  );
 
   useEffect(() => {
     if (activeStepKey !== "historico") return;
@@ -1658,7 +1667,7 @@ export default function App() {
                   ))}
                 </select>
               </div>
-              <PrimaryButton onClick={carregarHistorico} loading={histCarregando}>
+              <PrimaryButton onClick={() => carregarHistorico()} loading={histCarregando}>
                 <Search className="w-4 h-4" /> Filtrar
               </PrimaryButton>
             </div>
@@ -1773,7 +1782,9 @@ export default function App() {
             ) : (
               <div className="space-y-2">
                 <p className="text-xs px-1" style={{ color: "hsl(var(--text-muted))" }}>
-                  {histEntradas.length} carta{histEntradas.length !== 1 ? "s" : ""}
+                  {histTotal > histEntradas.length
+                    ? `${histEntradas.length} de ${histTotal} cartas`
+                    : `${histEntradas.length} carta${histEntradas.length !== 1 ? "s" : ""}`}
                 </p>
                 {histEntradas.map((e) => (
                   <button
@@ -1814,6 +1825,13 @@ export default function App() {
                     </span>
                   </button>
                 ))}
+                {histEntradas.length < histTotal && (
+                  <div className="flex justify-center pt-1">
+                    <SecondaryButton onClick={() => carregarHistorico(true)} disabled={histCarregando}>
+                      {histCarregando ? "Carregando…" : `Carregar mais (${histTotal - histEntradas.length} restantes)`}
+                    </SecondaryButton>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1821,7 +1839,7 @@ export default function App() {
               <SecondaryButton onClick={() => goTo("modelos")}>
                 <ArrowLeft className="w-4 h-4" /> Voltar ao início
               </SecondaryButton>
-              <SecondaryButton onClick={carregarHistorico}>
+              <SecondaryButton onClick={() => carregarHistorico()}>
                 <RefreshCw className="w-4 h-4" /> Atualizar
               </SecondaryButton>
             </div>
