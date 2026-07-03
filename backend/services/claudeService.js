@@ -248,13 +248,53 @@ Para 'malha': procure referências a contratos de concessão, trechos ferroviár
   throw lastError;
 }
 
+// ─── Bloco de feedback estruturado da IA ───
+// A minuta vem seguida de um delimitador + JSON {resumo, atencao, dicas},
+// que o frontend exibe num painel próprio. Delimitador é mais robusto que
+// pedir a resposta inteira em JSON (textos longos quebram o parse).
+const FEEDBACK_DELIM = '<<<FEEDBACK>>>';
+
+const INSTRUCAO_FEEDBACK = `
+
+BLOCO DE FEEDBACK (obrigatório, fora da carta):
+Após o texto completo da minuta, escreva em uma linha isolada exatamente:
+${FEEDBACK_DELIM}
+e, na linha seguinte, um JSON de linha única no formato:
+{"resumo":"o que foi feito, em 1-2 frases","atencao":["item que merece revisão humana"],"dicas":["sugestão opcional de melhoria"]}
+Em "atencao", liste itens como: prazos citados, normas/fundamentação legal utilizadas, dados que você assumiu sem confirmação e lacunas marcadas como [AGUARDANDO INFORMAÇÃO INTERNA]. Máximo 4 itens por lista; listas podem ser vazias. Este bloco NÃO faz parte da carta — nunca o mencione no corpo.`;
+
+/**
+ * Separa o texto da minuta do bloco de feedback estruturado.
+ * @param {string} raw - Resposta bruta da Claude
+ * @returns {{ texto: string, feedback: {resumo, atencao, dicas} | null }}
+ */
+function separarFeedback(raw) {
+  const idx = raw.indexOf(FEEDBACK_DELIM);
+  if (idx === -1) return { texto: raw.trim(), feedback: null };
+  const texto = raw.slice(0, idx).trim();
+  const cauda = raw.slice(idx + FEEDBACK_DELIM.length).replace(/```json|```/gi, '').trim();
+  try {
+    const fb = JSON.parse(cauda);
+    return {
+      texto,
+      feedback: {
+        resumo: typeof fb.resumo === 'string' ? fb.resumo : '',
+        atencao: Array.isArray(fb.atencao) ? fb.atencao.filter((x) => typeof x === 'string') : [],
+        dicas: Array.isArray(fb.dicas) ? fb.dicas.filter((x) => typeof x === 'string') : [],
+      },
+    };
+  } catch {
+    return { texto, feedback: null };
+  }
+}
+
 /**
  * Gera uma minuta de resposta ao ofício com base no briefing e nas informações fornecidas pelo usuário.
  * @param {Object} params
  * @param {Object} params.briefing - Briefing extraído do ofício
  * @param {Array}  params.pontosRespondidos - Array de {ponto, resposta}
  * @param {string} params.textoModelosReferencia - Texto concatenado dos modelos de referência
- * @returns {Promise<string>} - Texto da minuta gerada
+ * @returns {Promise<{texto: string, feedback: Object|null}>} - Minuta + feedback estruturado
  */
 async function gerarMinuta({ briefing, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate, contextosAdicionais }) {
   // Resolve os dados cadastrais da(s) malha(s) identificada(s)
@@ -330,19 +370,20 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
 3. Para pontos sem resposta, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
 4. O ÚLTIMO PARÁGRAFO deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. NÃO adicione cabeçalho, saudação, "Atenciosamente," ou assinatura — apenas os parágrafos do corpo
-6. Gere APENAS o corpo da resposta, sem comentários ou explicações adicionais` : `1. O PRIMEIRO PARÁGRAFO DO CORPO deve começar OBRIGATORIAMENTE com:
+6. Gere APENAS o corpo da resposta, sem comentários ou explicações adicionais (exceto o bloco de feedback ao final)` : `1. O PRIMEIRO PARÁGRAFO DO CORPO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria, em atenção ao ${briefing?.numero || 'Ofício'}, para..."
 2. Use a estrutura: referência ao ofício → abertura com identificação da empresa → atendimento numerado a cada ponto → encerramento → assinatura
 3. Para pontos sem resposta informada, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
 4. O parágrafo antes de "Atenciosamente," deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. Numere o ofício como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
-6. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais`}`;
+6. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais (exceto o bloco de feedback ao final)`}`;
 
-  return callClaude(
+  const raw = await callClaude(
     [{ role: 'user', content: userMessage }],
-    systemPrompt,
+    systemPrompt + INSTRUCAO_FEEDBACK,
     8000
   );
+  return separarFeedback(raw);
 }
 
 /**
@@ -374,7 +415,8 @@ PADRÕES OBRIGATÓRIOS:
 - O ÚLTIMO PARÁGRAFO do corpo deve ser SEMPRE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais." — preserve-o em qualquer refinamento, salvo instrução explícita do usuário para alterá-lo.
 
 Quando o usuário pedir uma modificação, aplique-a com precisão e retorne a minuta completa e reformulada.
-Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a minuta atualizada (mesmo que sem mudanças).`;
+Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a minuta atualizada (mesmo que sem mudanças).
+No bloco de feedback, o campo "resumo" deve descrever especificamente O QUE VOCÊ ALTEROU nesta interação (ex: "Reformulei o 3º parágrafo em tom mais objetivo e removi a menção à Resolução X").`;
 
   // Monta o histórico da conversa, iniciando com a minuta atual no primeiro turno
   const messages = [];
@@ -397,8 +439,8 @@ Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a m
     messages.push({ role: 'user', content: mensagem });
   }
 
-  const resposta = await callClaude(messages, systemPrompt, 8000);
-  return resposta;
+  const raw = await callClaude(messages, systemPrompt + INSTRUCAO_FEEDBACK, 8000);
+  return separarFeedback(raw);
 }
 
 /**
@@ -472,19 +514,20 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
 3. Estruture com parágrafos lógicos; use numeração se houver múltiplos pontos
 4. O ÚLTIMO PARÁGRAFO deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. NÃO adicione cabeçalho, saudação, "Atenciosamente," ou assinatura — apenas os parágrafos do corpo
-6. Gere APENAS o corpo da carta, sem comentários ou explicações adicionais` : `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
+6. Gere APENAS o corpo da carta, sem comentários ou explicações adicionais (exceto o bloco de feedback ao final)` : `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria para comunicar..."
 2. Desenvolva o assunto de forma clara, formal e tecnicamente fundamentada
 3. Estruture com parágrafos lógicos; use numeração se houver múltiplos pontos
 4. O parágrafo antes de "Atenciosamente," deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. Numere a carta como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
-6. Gere APENAS o texto da carta, sem comentários ou explicações adicionais`}`;
+6. Gere APENAS o texto da carta, sem comentários ou explicações adicionais (exceto o bloco de feedback ao final)`}`;
 
-  return callClaude(
+  const raw = await callClaude(
     [{ role: 'user', content: userMessage }],
-    systemPrompt,
+    systemPrompt + INSTRUCAO_FEEDBACK,
     8000
   );
+  return separarFeedback(raw);
 }
 
 /**

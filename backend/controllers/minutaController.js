@@ -82,7 +82,7 @@ async function gerarMinutaHandler(req, res, next) {
       : null;
     const usaTemplate = !!(templatePath && fs.existsSync(templatePath));
 
-    const textoRaw = await gerarMinuta({
+    const { texto: textoRaw, feedback } = await gerarMinuta({
       briefing, pontosRespondidos,
       textoModelosReferencia, templateHint: template.claudeHint, usaTemplate,
       contextosAdicionais: session.documentosComplementares.length ? [...session.documentosComplementares] : undefined,
@@ -111,6 +111,7 @@ async function gerarMinutaHandler(req, res, next) {
       documento: textoMinuta,
       resposta: textoMinuta,
       content: textoMinuta,
+      feedback,
       meta: {
         signatarioAntt: session.ultimaMinuta.signatarioAntt,
         cargoAntt:      session.ultimaMinuta.cargoAntt,
@@ -134,12 +135,13 @@ async function refinarMinutaHandler(req, res, next) {
     if (!mensagem?.trim()) return res.status(400).json({ success: false, message: 'mensagem é obrigatória.' });
 
     console.log('[Refinar] Refinando minuta com Claude...');
-    const textoRefinado = limparMarkdown(await refinarMinuta({
+    const { texto: textoRaw, feedback } = await refinarMinuta({
       textoAtual, mensagem: mensagem.trim(), historico: historico || [],
-    }));
+    });
+    const textoRefinado = limparMarkdown(textoRaw);
 
     session.ultimaMinuta.texto = textoRefinado;
-    res.json({ success: true, texto: textoRefinado, minuta: textoRefinado });
+    res.json({ success: true, texto: textoRefinado, minuta: textoRefinado, feedback });
   } catch (err) {
     next(err);
   }
@@ -164,7 +166,7 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
     const textoModelosReferencia = [...modelosPermanentes, ...session.modelos]
       .map(m => m.textoExtraido).join('\n\n---\n\n').substring(0, 8000);
 
-    const textoRaw = await gerarCartaEspontanea({
+    const { texto: textoRaw, feedback } = await gerarCartaEspontanea({
       malha: malhaKey, destinatario, cargoDestinatario, area,
       referencia: referencia?.trim() || '',
       processo: processo?.trim() || '',
@@ -194,6 +196,7 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
       success: true,
       minuta: textoMinuta,
       texto: textoMinuta,
+      feedback,
       meta: {
         signatarioAntt: session.ultimaMinuta.signatarioAntt,
         cargoAntt:      session.ultimaMinuta.cargoAntt,

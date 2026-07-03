@@ -13,6 +13,8 @@ import {
   Download,
   Sparkles,
   Lightbulb,
+  ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
 import {
@@ -26,6 +28,7 @@ import {
   type Template,
   type Briefing,
   type MinutaMeta,
+  type AiFeedback,
 } from "./lib/api";
 
 // ── Fallback caso a API de templates não responda ──
@@ -219,6 +222,8 @@ export default function App() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [numeroCarta, setNumeroCarta] = useState("0001");
   const [exportando, setExportando] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<AiFeedback | null>(null);
+  const [feedbackAberto, setFeedbackAberto] = useState(true);
 
   const steps = flowType === "espontanea" ? STEPS_ESPONTANEA : STEPS_RESPOSTA;
 
@@ -282,6 +287,8 @@ export default function App() {
       const r = await gerarMinuta({ modeloId: selectedTemplate || "objetiva", briefing, pontosRespondidos });
       setMinutaTexto(r.minuta);
       setMinutaMeta(r.meta);
+      setAiFeedback(r.feedback ?? null);
+      setFeedbackAberto(true);
       setHistorico([]);
       markCompleted("dados-resposta");
       goTo("minuta");
@@ -308,6 +315,8 @@ export default function App() {
       });
       setMinutaTexto(r.minuta);
       setMinutaMeta(r.meta);
+      setAiFeedback(r.feedback ?? null);
+      setFeedbackAberto(true);
       setHistorico([]);
       markCompleted("dados-espontanea");
       goTo("minuta");
@@ -328,6 +337,8 @@ export default function App() {
         historico,
       });
       setMinutaTexto(r.texto);
+      setAiFeedback(r.feedback ?? null);
+      setFeedbackAberto(true);
       setHistorico((h) => [
         ...h,
         { role: "user", content: refinamentoMsg, minutaRef: minutaTexto },
@@ -372,8 +383,11 @@ export default function App() {
     const siglas = MALHA_OPTIONS.filter((m) => malhasSelecionadas.has(m.key))
       .map((m) => m.sigla)
       .join(", ");
-    return `${numeroCarta.padStart(4, "0")} - GREG - ${ano} - ${minutaMeta?.assunto || assunto || "Assunto"}${
-      siglas ? ` - ${siglas}` : ""
+    const assuntoBase = minutaMeta?.assunto || assunto || "Assunto";
+    // O assunto da IA costuma já terminar com a sigla da entidade — não duplica
+    const jaTemSigla = !!siglas && assuntoBase.trim().toUpperCase().endsWith(siglas.toUpperCase());
+    return `${numeroCarta.padStart(4, "0")} - GREG - ${ano} - ${assuntoBase}${
+      siglas && !jaTemSigla ? ` - ${siglas}` : ""
     }`;
   };
 
@@ -931,6 +945,76 @@ export default function App() {
                 }}
               />
             </div>
+
+            {/* ── Painel de feedback da IA ── */}
+            {aiFeedback && (aiFeedback.resumo || aiFeedback.atencao.length > 0 || aiFeedback.dicas.length > 0) && (
+              <div
+                className="rounded-lg"
+                style={{
+                  background: "hsl(var(--surface-panel))",
+                  border: "1px solid hsl(var(--border) / 0.7)",
+                  padding: "10px 14px",
+                }}
+              >
+                <button
+                  onClick={() => setFeedbackAberto((v) => !v)}
+                  className="w-full flex items-center gap-2"
+                  style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}
+                >
+                  <Sparkles className="w-3.5 h-3.5" style={{ color: "hsl(var(--primary))" }} />
+                  <span
+                    className="text-[11px] font-semibold uppercase tracking-widest"
+                    style={{ color: "hsl(var(--text-muted))" }}
+                  >
+                    Feedback da IA
+                  </span>
+                  <ChevronDown
+                    className="w-3.5 h-3.5 ml-auto"
+                    style={{
+                      color: "hsl(var(--text-muted))",
+                      transform: feedbackAberto ? "rotate(180deg)" : "none",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </button>
+                {feedbackAberto && (
+                  <div
+                    className="mt-2 space-y-2"
+                    style={{ maxHeight: "170px", overflowY: "auto", fontSize: "12.5px", lineHeight: "1.55" }}
+                  >
+                    {aiFeedback.resumo && (
+                      <p style={{ color: "hsl(var(--text-secondary))" }}>{aiFeedback.resumo}</p>
+                    )}
+                    {aiFeedback.atencao.length > 0 && (
+                      <div className="space-y-1">
+                        {aiFeedback.atencao.map((item, i) => (
+                          <div key={i} className="flex gap-1.5">
+                            <AlertTriangle
+                              className="w-3 h-3 flex-shrink-0"
+                              style={{ color: "hsl(38 85% 60%)", marginTop: "3px" }}
+                            />
+                            <span style={{ color: "hsl(var(--text-secondary))" }}>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {aiFeedback.dicas.length > 0 && (
+                      <div className="space-y-1">
+                        {aiFeedback.dicas.map((item, i) => (
+                          <div key={i} className="flex gap-1.5">
+                            <Lightbulb
+                              className="w-3 h-3 flex-shrink-0"
+                              style={{ color: "hsl(204 76% 65%)", marginTop: "3px" }}
+                            />
+                            <span style={{ color: "hsl(var(--text-muted))" }}>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="info-card">
               <p className="text-xs font-semibold uppercase mb-2" style={{ color: "hsl(var(--text-muted))" }}>

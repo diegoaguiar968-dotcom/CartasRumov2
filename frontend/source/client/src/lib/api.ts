@@ -89,10 +89,17 @@ export interface MinutaMeta {
   modeloId: string;
 }
 
+export interface AiFeedback {
+  resumo: string;
+  atencao: string[];
+  dicas: string[];
+}
+
 export interface MinutaResponse {
   success: boolean;
   minuta: string;
   texto: string;
+  feedback?: AiFeedback | null;
   meta: MinutaMeta;
 }
 
@@ -129,7 +136,7 @@ export async function refinarMinuta(params: {
   textoAtual: string;
   mensagem: string;
   historico: { role: string; content: string; minutaRef?: string }[];
-}): Promise<{ success: boolean; texto: string; minuta: string }> {
+}): Promise<{ success: boolean; texto: string; minuta: string; feedback?: AiFeedback | null }> {
   const res = await req("/api/minuta/refinar", {
     method: "POST",
     body: JSON.stringify(params),
