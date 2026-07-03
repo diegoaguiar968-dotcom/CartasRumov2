@@ -35,6 +35,8 @@ import {
   getHistoricoDetalhe,
   excluirHistoricoEntrada,
   urlHistoricoDocx,
+  getProximoNumero,
+  numeroJaExiste,
   type Template,
   type Briefing,
   type MinutaMeta,
@@ -254,7 +256,20 @@ export default function App() {
   const [refinando, setRefinando] = useState(false);
   const [historico, setHistorico] = useState<any[]>([]);
   const [numeroCarta, setNumeroCarta] = useState("0001");
+  const [numeroSugerido, setNumeroSugerido] = useState(false);
   const [exportando, setExportando] = useState(false);
+
+  // Sugere o próximo número sequencial com base no histórico do ano
+  const sugerirNumero = useCallback(() => {
+    getProximoNumero()
+      .then((r) => {
+        if (r.proximo) {
+          setNumeroCarta(String(r.proximo).padStart(4, "0"));
+          setNumeroSugerido(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [aiFeedback, setAiFeedback] = useState<AiFeedback | null>(null);
   const [feedbackAberto, setFeedbackAberto] = useState(true);
 
@@ -338,6 +353,7 @@ export default function App() {
       setAiFeedback(r.feedback ?? null);
       setFeedbackAberto(true);
       setHistorico([]);
+      sugerirNumero();
       markCompleted("dados-resposta");
       goTo("minuta");
     } catch (e: any) {
@@ -366,6 +382,7 @@ export default function App() {
       setAiFeedback(r.feedback ?? null);
       setFeedbackAberto(true);
       setHistorico([]);
+      sugerirNumero();
       markCompleted("dados-espontanea");
       goTo("minuta");
     } catch (e: any) {
@@ -404,6 +421,22 @@ export default function App() {
     if (!minutaTexto || !minutaMeta) return;
     setExportando(true);
     try {
+      // Mitigação de colisão: alguém pode ter usado o número entre a sugestão e o download
+      try {
+        if (await numeroJaExiste(numeroCarta)) {
+          const ok = confirm(
+            `O número ${numeroCarta.padStart(4, "0")} já consta no histórico deste ano ` +
+              `(pode ter sido usado por outro colega ou ser uma reemissão desta carta).\n\n` +
+              `Deseja usar este número mesmo assim?`
+          );
+          if (!ok) {
+            setExportando(false);
+            return;
+          }
+        }
+      } catch {
+        /* verificação indisponível — segue o download normalmente */
+      }
       const { responsavel, area } = getResponsavel();
       await downloadDocx(numeroCarta, minutaTexto, {
         ...minutaMeta,
@@ -504,6 +537,7 @@ export default function App() {
     });
     setMalhasSelecionadas(new Set(keys));
     setNumeroCarta((e.titulo || "").split("/")[0] || "0001");
+    setNumeroSugerido(false);
     setAiFeedback(null);
     setHistorico([]);
     setHistDetalhe(null);
@@ -1184,11 +1218,22 @@ export default function App() {
             <div className="info-card">
               <p className="text-xs font-semibold uppercase mb-2" style={{ color: "hsl(var(--text-muted))" }}>
                 Número da carta
+                {numeroSugerido && (
+                  <span
+                    className="ml-2 normal-case font-normal"
+                    style={{ color: "hsl(var(--rumo-green))", letterSpacing: 0 }}
+                  >
+                    · sugerido pelo histórico — editável
+                  </span>
+                )}
               </p>
               <div className="flex items-center gap-2 flex-wrap text-sm" style={{ color: "hsl(var(--text-secondary))" }}>
                 <input
                   value={numeroCarta}
-                  onChange={(e) => setNumeroCarta(e.target.value)}
+                  onChange={(e) => {
+                    setNumeroCarta(e.target.value);
+                    setNumeroSugerido(false);
+                  }}
                   className="w-16 px-2 py-1 rounded text-sm text-center"
                   style={{
                     background: "hsl(var(--surface-app))",

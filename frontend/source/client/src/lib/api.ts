@@ -201,6 +201,21 @@ export function urlHistoricoDocx(id: string): string {
   return `${API_BASE}/api/historico/${id}/docx`;
 }
 
+export async function getProximoNumero(): Promise<{
+  success: boolean;
+  proximo: number | null;
+  ano: number;
+}> {
+  const res = await req("/api/historico/proximo-numero");
+  return res.json();
+}
+
+export async function numeroJaExiste(numero: string): Promise<boolean> {
+  const res = await req(`/api/historico/numero-existe?numero=${encodeURIComponent(numero)}`);
+  const data = await res.json();
+  return !!data.existe;
+}
+
 // ── Export ──
 export async function downloadDocx(
   numeroOficio: string,

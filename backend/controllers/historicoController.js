@@ -108,6 +108,48 @@ async function opcoesFiltro(_req, res, next) {
 }
 
 /**
+ * GET /api/historico/proximo-numero — sugere o próximo número sequencial do ano.
+ * Baseia-se no maior NNNN de titulo 'NNNN/GREG/AAAA' do ano corrente:
+ * histórico vazio ou virada de ano → 1; números manuais fora de sequência
+ * são absorvidos pelo MAX.
+ */
+async function proximoNumero(_req, res, next) {
+  try {
+    const ano = new Date().getFullYear();
+    if (!isEnabled()) return res.json({ success: true, proximo: null, ano });
+    const { rows } = await query(
+      `SELECT MAX(CAST(SPLIT_PART(titulo, '/', 1) AS INTEGER)) AS maior
+         FROM historico
+        WHERE titulo ~ ('^\\d+/GREG/' || $1 || '$')`,
+      [String(ano)]
+    );
+    const maior = rows[0]?.maior || 0;
+    res.json({ success: true, proximo: maior + 1, ano });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/historico/numero-existe?numero=0007 — verifica colisão no ano corrente.
+ */
+async function numeroExiste(req, res, next) {
+  try {
+    if (!isEnabled()) return res.json({ success: true, existe: false });
+    const seq = String(req.query.numero || '').replace(/\D/g, '').padStart(4, '0');
+    if (!seq || seq === '0000') return res.json({ success: true, existe: false });
+    const ano = new Date().getFullYear();
+    const { rows } = await query(
+      `SELECT 1 FROM historico WHERE titulo = $1 LIMIT 1`,
+      [`${seq}/GREG/${ano}`]
+    );
+    res.json({ success: true, existe: rows.length > 0 });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/historico/:id — detalhes completos (inclui a minuta).
  */
 async function detalheHistorico(req, res, next) {
@@ -160,6 +202,8 @@ module.exports = {
   salvarHistorico,
   listarHistorico,
   opcoesFiltro,
+  proximoNumero,
+  numeroExiste,
   detalheHistorico,
   atualizarHistorico,
   excluirHistorico,
