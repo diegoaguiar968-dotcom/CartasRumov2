@@ -60,7 +60,12 @@ function gerarNomeArquivo(numero, assunto, malhaKey) {
   const assuntoSanitized = sanitizeNome(assunto) || 'Carta';
   const siglaMalha = siglaMalhaDe(malhaKey);
 
-  return siglaMalha
+  // O assunto gerado pela IA costuma já terminar com a(s) sigla(s) da entidade
+  // (ex: "Dilação de Prazo - COE - RMP") — evita duplicar no nome do arquivo.
+  const assuntoJaTemSigla = siglaMalha &&
+    assuntoSanitized.toUpperCase().endsWith(siglaMalha.toUpperCase());
+
+  return siglaMalha && !assuntoJaTemSigla
     ? `${seq} - GREG - ${ano} - ${assuntoSanitized} - ${siglaMalha}.docx`
     : `${seq} - GREG - ${ano} - ${assuntoSanitized}.docx`;
 }
