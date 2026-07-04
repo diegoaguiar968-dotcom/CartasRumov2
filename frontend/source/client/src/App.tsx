@@ -174,7 +174,12 @@ export default function App() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const oficioInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Etapa 3 (resposta): pontos ──
+  // ── Etapa 3 (resposta): destinatário (editável) + pontos ──
+  const [respDestNome, setRespDestNome] = useState("");
+  const [respDestCargo, setRespDestCargo] = useState("");
+  const [respDestArea, setRespDestArea] = useState("");
+  const [respMatch, setRespMatch] = useState<AnttServidor | null>(null);
+  const [respMatchDispensado, setRespMatchDispensado] = useState(false);
   const [pontosRespostas, setPontosRespostas] = useState<Record<number, string>>({});
 
   // ── Etapa 2b (espontânea): dados ──
@@ -314,6 +319,15 @@ export default function App() {
       const inicial: Record<number, string> = {};
       r.briefing.pontos?.forEach((_, i) => (inicial[i] = ""));
       setPontosRespostas(inicial);
+
+      // Pré-preenche o destinatário com a extração e tenta casar com a base ANTT
+      const { nome, cargo } = parsearSignatario(r.briefing.signatarioAntt);
+      setRespDestNome(nome);
+      setRespDestCargo(cargo);
+      setRespDestArea(r.briefing.area && !/não identificad/i.test(r.briefing.area) ? r.briefing.area : "");
+      setRespMatchDispensado(false);
+      setRespMatch(acharServidorPorNome(nome));
+
       markCompleted("oficio");
       goTo("dados-resposta");
     } catch (e: any) {
@@ -331,7 +345,13 @@ export default function App() {
         ponto,
         resposta: pontosRespostas[i] || "",
       }));
-      const r = await gerarMinuta({ modeloId: selectedTemplate || "objetiva", briefing, pontosRespondidos });
+      // Usa o destinatário (possivelmente corrigido) na geração
+      const briefingFinal: Briefing = {
+        ...briefing,
+        signatarioAntt: respDestCargo ? `${respDestNome} - ${respDestCargo}` : respDestNome,
+        area: respDestArea || briefing.area,
+      };
+      const r = await gerarMinuta({ modeloId: selectedTemplate || "objetiva", briefing: briefingFinal, pontosRespondidos });
       setMinutaTexto(r.minuta);
       setMinutaMeta(r.meta);
       setAiFeedback(r.feedback ?? null);
@@ -443,6 +463,54 @@ export default function App() {
     setDestNome(s.nome);
     setDestCargo(s.cargo);
     setDestArea(areaLabel(s.sigla));
+  }
+
+  function preencherDestinatarioResposta(servidorId: string) {
+    const s = anttServidores[Number(servidorId)];
+    if (!s) return;
+    setRespDestNome(s.nome);
+    setRespDestCargo(s.cargo);
+    setRespDestArea(areaLabel(s.sigla));
+  }
+
+  function aplicarMatchResposta(s: AnttServidor) {
+    setRespDestNome(s.nome);
+    setRespDestCargo(s.cargo);
+    setRespDestArea(areaLabel(s.sigla));
+    setRespMatch(null);
+  }
+
+  // Separa "Nome - Cargo" (ou "Nome, Cargo") extraído do ofício
+  function parsearSignatario(sig: string): { nome: string; cargo: string } {
+    const raw = (sig || "").trim();
+    if (!raw || /não identificad/i.test(raw)) return { nome: "", cargo: "" };
+    const m = raw.match(/\s[-–—]\s|,\s/);
+    if (m && m.index !== undefined) {
+      return { nome: raw.slice(0, m.index).trim(), cargo: raw.slice(m.index + m[0].length).trim() };
+    }
+    return { nome: raw, cargo: "" };
+  }
+
+  // Bônus: casa o nome extraído com a base da ANTT (nome+sobrenome coincidentes)
+  function acharServidorPorNome(nomeExtraido: string): AnttServidor | null {
+    const norm = (s: string) =>
+      (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+    const q = norm(nomeExtraido);
+    if (q.length < 4) return null;
+    const exato = anttServidores.find((s) => norm(s.nome) === q);
+    if (exato) return exato;
+    const qtokens = q.split(/\s+/).filter((t) => t.length > 2);
+    let melhor: AnttServidor | null = null;
+    let melhorScore = 0;
+    for (const s of anttServidores) {
+      const st = norm(s.nome).split(/\s+/);
+      const overlap = qtokens.filter((t) => st.includes(t)).length;
+      if (overlap > melhorScore) {
+        melhorScore = overlap;
+        melhor = s;
+      }
+    }
+    return melhorScore >= 2 ? melhor : null; // exige ao menos 2 tokens (nome + sobrenome)
   }
 
   function toggleMalha(key: string) {
@@ -741,11 +809,97 @@ export default function App() {
 
             <div className="info-card space-y-1">
               <p className="text-xs font-semibold uppercase" style={{ color: "hsl(var(--text-muted))" }}>
-                Ofício {briefing.numero}
+                Ofício recebido
               </p>
+              <p className="text-white text-sm">{briefing.numero}</p>
               <p style={{ color: "hsl(var(--text-secondary))", fontSize: "13px" }}>
-                {briefing.signatarioAntt} · {briefing.area} · Prazo: {briefing.prazo}
+                Prazo: {briefing.prazo} · Processo: {briefing.processo || "—"}
               </p>
+            </div>
+
+            {/* ── Destinatário (extraído, editável) ── */}
+            <div className="info-card space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase" style={{ color: "hsl(var(--primary))" }}>
+                  Destinatário (ANTT)
+                </p>
+                <span className="text-[11px]" style={{ color: "hsl(var(--text-muted))" }}>
+                  extraído do ofício · edite se necessário
+                </span>
+              </div>
+
+              {/* Bônus: sugestão de correspondência com a base da ANTT (quando normaliza algo) */}
+              {respMatch &&
+                !respMatchDispensado &&
+                (respDestNome !== respMatch.nome ||
+                  respDestCargo !== respMatch.cargo ||
+                  respDestArea !== areaLabel(respMatch.sigla)) && (
+                <div
+                  className="rounded-lg flex items-start gap-2"
+                  style={{
+                    background: "hsl(var(--rumo-green) / 0.08)",
+                    border: "1px solid hsl(var(--rumo-green) / 0.4)",
+                    padding: "10px 12px",
+                  }}
+                >
+                  <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(var(--rumo-green))", marginTop: "2px" }} />
+                  <div className="flex-1">
+                    <p className="text-sm" style={{ color: "hsl(var(--text-secondary))" }}>
+                      Encontramos na base da ANTT:{" "}
+                      <strong className="text-white">{respMatch.nome}</strong> — {respMatch.cargo} · {respMatch.sigla}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => aplicarMatchResposta(respMatch)}
+                        className="text-xs font-semibold px-3 py-1 rounded-md"
+                        style={{ background: "hsl(var(--rumo-green))", color: "white", cursor: "pointer", border: "none" }}
+                      >
+                        Usar
+                      </button>
+                      <button
+                        onClick={() => setRespMatchDispensado(true)}
+                        className="text-xs px-3 py-1 rounded-md"
+                        style={{ background: "transparent", color: "hsl(var(--text-muted))", cursor: "pointer", border: "1px solid hsl(var(--border))" }}
+                      >
+                        Manter o extraído
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                    Nome
+                  </label>
+                  <Autocomplete
+                    value={respDestNome}
+                    onChangeText={setRespDestNome}
+                    onSelect={preencherDestinatarioResposta}
+                    options={servidorOptions}
+                    placeholder="Nome do destinatário"
+                  />
+                </div>
+                <TextField
+                  label="Cargo"
+                  value={respDestCargo}
+                  onChange={setRespDestCargo}
+                  placeholder="Cargo"
+                />
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                  Área / Superintendência
+                </label>
+                <Autocomplete
+                  value={respDestArea}
+                  onChangeText={setRespDestArea}
+                  onSelect={(sigla) => setRespDestArea(areaLabel(sigla))}
+                  options={superintendenciaOptions}
+                  placeholder="Área / Superintendência"
+                />
+              </div>
             </div>
 
             {briefing.pontos.map((ponto, i) => (
