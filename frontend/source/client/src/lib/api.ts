@@ -147,6 +147,35 @@ export async function refinarMinuta(params: {
   return res.json();
 }
 
+// ── Base ANTT (autocomplete de destinatário) ──
+export interface AnttServidor {
+  nome: string;
+  cargo: string;
+  sigla: string;
+  unidade: string;
+  email: string;
+}
+export interface AnttSuperintendencia {
+  sigla: string;
+  nome: string;
+}
+
+let _anttCache: { superintendencias: AnttSuperintendencia[]; servidores: AnttServidor[] } | null = null;
+
+export async function getAnttServidores(): Promise<{
+  superintendencias: AnttSuperintendencia[];
+  servidores: AnttServidor[];
+}> {
+  if (_anttCache) return _anttCache;
+  const res = await req("/api/antt/servidores");
+  const data = await res.json();
+  _anttCache = {
+    superintendencias: data.superintendencias || [],
+    servidores: data.servidores || [],
+  };
+  return _anttCache;
+}
+
 // ── Histórico ──
 export interface HistoricoEntrada {
   id: string;

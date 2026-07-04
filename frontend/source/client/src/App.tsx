@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   Zap,
   Paperclip,
@@ -25,6 +25,7 @@ import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
 import { InfoCard, PrimaryButton, SecondaryButton, TextField } from "./components/ui-kit";
 import Stepper from "./components/Stepper";
 import AjudaStep from "./components/steps/AjudaStep";
+import Autocomplete, { type AutocompleteOption } from "./components/Autocomplete";
 import { Toaster } from "./components/ui/toaster";
 import { useToast } from "./hooks/use-toast";
 import {
@@ -42,11 +43,14 @@ import {
   baixarHistoricoDocx,
   getProximoNumero,
   numeroJaExiste,
+  getAnttServidores,
   type Template,
   type Briefing,
   type MinutaMeta,
   type AiFeedback,
   type HistoricoEntrada,
+  type AnttServidor,
+  type AnttSuperintendencia,
 } from "./lib/api";
 
 // ── Fallback caso a API de templates não responda ──
@@ -245,6 +249,48 @@ export default function App() {
     loadTemplatesIfNeeded();
   });
 
+  // ── Base de servidores da ANTT (autocomplete de destinatário) ──
+  const [anttServidores, setAnttServidores] = useState<AnttServidor[]>([]);
+  const [anttSuperintendencias, setAnttSuperintendencias] = useState<AnttSuperintendencia[]>([]);
+
+  useEffect(() => {
+    getAnttServidores()
+      .then((r) => {
+        setAnttServidores(r.servidores);
+        setAnttSuperintendencias(r.superintendencias);
+      })
+      .catch(() => {});
+  }, []);
+
+  const siglaParaNome = useMemo(
+    () => Object.fromEntries(anttSuperintendencias.map((s) => [s.sigla, s.nome])),
+    [anttSuperintendencias]
+  );
+  const areaLabel = useCallback(
+    (sigla: string) => (siglaParaNome[sigla] ? `${sigla} — ${siglaParaNome[sigla]}` : sigla),
+    [siglaParaNome]
+  );
+
+  const servidorOptions: AutocompleteOption[] = useMemo(
+    () =>
+      anttServidores.map((s, i) => ({
+        id: String(i),
+        primary: s.nome,
+        secondary: `${s.cargo} · ${s.sigla}`,
+        search: `${s.nome} ${s.cargo} ${s.sigla} ${s.unidade}`,
+      })),
+    [anttServidores]
+  );
+  const superintendenciaOptions: AutocompleteOption[] = useMemo(
+    () =>
+      anttSuperintendencias.map((s) => ({
+        id: s.sigla,
+        primary: `${s.sigla} — ${s.nome}`,
+        search: `${s.sigla} ${s.nome}`,
+      })),
+    [anttSuperintendencias]
+  );
+
   function goTo(key: string) {
     setActiveStepKey(key);
   }
@@ -388,6 +434,15 @@ export default function App() {
     } finally {
       setExportando(false);
     }
+  }
+
+  // Preenche destinatário (nome/cargo/área) a partir de um servidor da base ANTT
+  function preencherDestinatarioEspontanea(servidorId: string) {
+    const s = anttServidores[Number(servidorId)];
+    if (!s) return;
+    setDestNome(s.nome);
+    setDestCargo(s.cargo);
+    setDestArea(areaLabel(s.sigla));
   }
 
   function toggleMalha(key: string) {
@@ -734,11 +789,29 @@ export default function App() {
             </InfoCard>
 
             <div className="info-card space-y-3">
-              <p className="text-xs font-semibold uppercase" style={{ color: "hsl(var(--primary))" }}>
-                Destinatário (ANTT)
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase" style={{ color: "hsl(var(--primary))" }}>
+                  Destinatário (ANTT)
+                </p>
+                {servidorOptions.length > 0 && (
+                  <span className="text-[11px]" style={{ color: "hsl(var(--text-muted))" }}>
+                    digite o nome para buscar na base da ANTT
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
-                <TextField label="Nome" value={destNome} onChange={setDestNome} placeholder="Ex.: João da Silva" />
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                    Nome
+                  </label>
+                  <Autocomplete
+                    value={destNome}
+                    onChangeText={setDestNome}
+                    onSelect={preencherDestinatarioEspontanea}
+                    options={servidorOptions}
+                    placeholder="Ex.: João da Silva"
+                  />
+                </div>
                 <TextField
                   label="Cargo"
                   value={destCargo}
@@ -746,12 +819,18 @@ export default function App() {
                   placeholder="Ex.: Superintendente de Fiscalização"
                 />
               </div>
-              <TextField
-                label="Área / Superintendência"
-                value={destArea}
-                onChange={setDestArea}
-                placeholder="Ex.: SUFER — Superintendência de Fiscalização e Regulação"
-              />
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                  Área / Superintendência
+                </label>
+                <Autocomplete
+                  value={destArea}
+                  onChangeText={setDestArea}
+                  onSelect={(sigla) => setDestArea(areaLabel(sigla))}
+                  options={superintendenciaOptions}
+                  placeholder="Ex.: SUFER — Superintendência de Transporte Ferroviário"
+                />
+              </div>
             </div>
 
             <div className="info-card space-y-3">
