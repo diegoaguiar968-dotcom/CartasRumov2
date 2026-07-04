@@ -10,6 +10,60 @@
 const { isEnabled, query } = require('../services/db');
 const { gerarDocxDeEntrada } = require('./exportController');
 
+/**
+ * Modo de integração ativo, conforme as variáveis de ambiente:
+ *  - 'forms'   → link de Microsoft Forms pré-preenchido (sem premium)
+ *  - 'webhook' → POST para o Power Automate / Make (SHAREPOINT_WEBHOOK_URL)
+ *  - 'none'    → não configurado (botão desabilitado no frontend)
+ */
+function sharepointMode() {
+  if (process.env.SHAREPOINT_FORMS_URL_TEMPLATE) return 'forms';
+  if (process.env.SHAREPOINT_WEBHOOK_URL) return 'webhook';
+  return 'none';
+}
+
+/**
+ * GET /api/historico/:id/forms-url
+ * Substitui as sentinelas do template pelo valor da carta (URL-encoded) e
+ * devolve o link do Forms já pré-preenchido para o usuário revisar e enviar.
+ */
+async function formsUrl(req, res, next) {
+  const template = process.env.SHAREPOINT_FORMS_URL_TEMPLATE;
+  if (!template) {
+    return res.status(503).json({ success: false, message: 'Integração via formulário não configurada.' });
+  }
+  if (!isEnabled()) {
+    return res.status(503).json({ success: false, message: 'Banco de dados não configurado.' });
+  }
+  try {
+    const { rows } = await query('SELECT * FROM historico WHERE id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Entrada não encontrada.' });
+    const e = rows[0];
+
+    const mapa = {
+      ZZTITULOZZ: e.titulo || '',
+      ZZTEMAZZ: e.tema || '',
+      ZZORGAOZZ: e.orgao || 'ANTT',
+      ZZMALHAZZ: e.malha || '',
+      ZZOFICIOZZ: e.oficio || '',
+      ZZPROCESSOZZ: e.processo || '',
+      ZZAREAZZ: e.area || '',
+      ZZFORMAZZ: e.forma_envio || 'SEI',
+      ZZASSUNTOSZZ: e.assuntos || 'Resposta Ofício',
+      ZZRESPONSAVELZZ: e.responsavel || '',
+    };
+
+    let url = template;
+    for (const [sentinela, valor] of Object.entries(mapa)) {
+      url = url.split(sentinela).join(encodeURIComponent(valor));
+    }
+
+    res.json({ success: true, url });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function registrarSharePoint(req, res, next) {
   const webhook = process.env.SHAREPOINT_WEBHOOK_URL;
   if (!webhook) {
@@ -94,4 +148,4 @@ async function registrarSharePoint(req, res, next) {
   }
 }
 
-module.exports = { registrarSharePoint };
+module.exports = { registrarSharePoint, formsUrl, sharepointMode };

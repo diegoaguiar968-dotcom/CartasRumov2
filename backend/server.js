@@ -62,6 +62,7 @@ app.use(sessionMiddleware);
 app.use('/api', apiKeyMiddleware);
 
 // ─── Rotas ───
+const { sharepointMode } = require('./controllers/sharepointController');
 app.get('/api/status', (req, res) => {
   res.json({
     success: true,
@@ -69,6 +70,7 @@ app.get('/api/status', (req, res) => {
     message: 'ARCA — Backend rodando!',
     version: '2.0.0',
     ai: process.env.ANTHROPIC_API_KEY ? 'conectada' : 'desconectada (configure ANTHROPIC_API_KEY)',
+    sharepointMode: sharepointMode(),
   });
 });
 

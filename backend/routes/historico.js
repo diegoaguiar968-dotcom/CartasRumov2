@@ -10,7 +10,7 @@ const {
   excluirHistorico,
 } = require('../controllers/historicoController');
 const { exportarHistoricoDocx } = require('../controllers/exportController');
-const { registrarSharePoint } = require('../controllers/sharepointController');
+const { registrarSharePoint, formsUrl } = require('../controllers/sharepointController');
 
 router.get('/', listarHistorico);
 router.get('/opcoes', opcoesFiltro);
@@ -19,6 +19,7 @@ router.get('/proximo-numero', proximoNumero);
 router.get('/numero-existe', numeroExiste);
 router.get('/:id', detalheHistorico);
 router.get('/:id/docx', exportarHistoricoDocx);
+router.get('/:id/forms-url', formsUrl);
 router.post('/:id/sharepoint', registrarSharePoint);
 router.patch('/:id', atualizarHistorico);
 router.delete('/:id', excluirHistorico);
