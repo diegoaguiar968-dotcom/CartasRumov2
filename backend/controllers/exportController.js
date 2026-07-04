@@ -217,8 +217,9 @@ async function exportarDocx(req, res, next) {
     const processo       = meta.processo       ?? ultimaMinuta.processo       ?? '';
     const referencia     = meta.referencia     ?? ultimaMinuta.referencia     ?? '';
     const modeloId       = meta.modeloId       ?? ultimaMinuta.modeloId       ?? 'objetiva';
-    const responsavel    = meta.responsavel    ?? '';
-    const area           = meta.area           ?? '';
+    const responsavel      = meta.responsavel      ?? '';
+    const responsavelEmail = meta.responsavelEmail ?? '';
+    const area             = meta.area             ?? '';
 
     if (!conteudo) {
       return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
@@ -234,6 +235,7 @@ async function exportarDocx(req, res, next) {
       titulo: gerarTituloCarta(numeroOficio),
       nomeArquivo,
       responsavel,
+      responsavelEmail,
       area,
       tema: assunto,
       orgao: meta.orgao || 'ANTT',
@@ -255,6 +257,31 @@ async function exportarDocx(req, res, next) {
 }
 
 /**
+ * Gera o DOCX (buffer + nome) a partir de uma linha do histórico.
+ * Reutilizado pelo download do histórico e pela integração com o SharePoint.
+ */
+async function gerarDocxDeEntrada(e) {
+  const siglas = (e.malha || '').split(',').map(s => s.trim()).filter(Boolean);
+  const malhaKey = Object.entries(MALHAS)
+    .filter(([, m]) => siglas.includes(m.sigla))
+    .map(([key]) => key)
+    .join(',') || e.malha;
+
+  const { buffer, nomeArquivo } = await gerarDocxBuffer({
+    conteudo: e.minuta,
+    numeroOficio: (e.titulo || '').replace(/\/.*/, ''),
+    signatarioAntt: e.signatario_antt,
+    cargoAntt: e.cargo_antt,
+    malhaKey,
+    assunto: e.tema,
+    processo: e.processo,
+    referencia: e.oficio,
+    modeloId: e.modelo_id || 'objetiva',
+  });
+  return { buffer, nomeArquivo: e.nome_arquivo || nomeArquivo };
+}
+
+/**
  * GET /api/historico/:id/docx — re-gera o DOCX a partir de uma entrada salva.
  */
 async function exportarHistoricoDocx(req, res, next) {
@@ -265,32 +292,14 @@ async function exportarHistoricoDocx(req, res, next) {
     const { rows } = await query(`SELECT * FROM historico WHERE id = $1`, [req.params.id]);
     if (!rows.length) return res.status(404).json({ success: false, message: 'Entrada não encontrada.' });
 
-    const e = rows[0];
-    // Reconstrói a chave de malha a partir da(s) sigla(s) armazenada(s)
-    const siglas = (e.malha || '').split(',').map(s => s.trim()).filter(Boolean);
-    const malhaKey = Object.entries(MALHAS)
-      .filter(([, m]) => siglas.includes(m.sigla))
-      .map(([key]) => key)
-      .join(',') || e.malha;
-
-    const { buffer, nomeArquivo } = await gerarDocxBuffer({
-      conteudo: e.minuta,
-      numeroOficio: (e.titulo || '').replace(/\/.*/, ''),
-      signatarioAntt: e.signatario_antt,
-      cargoAntt: e.cargo_antt,
-      malhaKey,
-      assunto: e.tema,
-      processo: e.processo,
-      referencia: e.oficio,
-      modeloId: e.modelo_id || 'objetiva',
-    });
+    const { buffer, nomeArquivo } = await gerarDocxDeEntrada(rows[0]);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${e.nome_arquivo || nomeArquivo}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
     return res.send(buffer);
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { exportarDocx, exportarHistoricoDocx };
+module.exports = { exportarDocx, exportarHistoricoDocx, gerarDocxDeEntrada };

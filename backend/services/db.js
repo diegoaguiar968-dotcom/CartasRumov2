@@ -59,6 +59,9 @@ async function initDb() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_historico_criado_em ON historico (criado_em DESC);`);
+    // Migrações idempotentes (colunas adicionadas depois da criação original)
+    await pool.query(`ALTER TABLE historico ADD COLUMN IF NOT EXISTS responsavel_email TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE historico ADD COLUMN IF NOT EXISTS sharepoint_em TIMESTAMPTZ`);
     dbReady = true;
     console.log('[DB] Conectado ao Postgres — tabela de histórico pronta.');
   } catch (err) {

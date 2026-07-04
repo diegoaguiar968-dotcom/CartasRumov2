@@ -15,13 +15,14 @@ async function salvarHistorico(dados) {
   try {
     await query(
       `INSERT INTO historico
-        (titulo, nome_arquivo, responsavel, area, assuntos, tema, orgao, malha,
+        (titulo, nome_arquivo, responsavel, responsavel_email, area, assuntos, tema, orgao, malha,
          oficio, processo, forma_envio, modelo_id, minuta, signatario_antt, cargo_antt)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
         dados.titulo || '',
         dados.nomeArquivo || '',
         dados.responsavel || '',
+        dados.responsavelEmail || '',
         dados.area || '',
         dados.assuntos || 'Resposta Ofício',
         dados.tema || '',
@@ -81,7 +82,7 @@ async function listarHistorico(req, res, next) {
     const { rows } = await query(
       `SELECT id, criado_em, titulo, nome_arquivo, responsavel, area, assuntos,
               tema, orgao, malha, oficio, processo, forma_envio, modelo_id,
-              signatario_antt, cargo_antt
+              signatario_antt, cargo_antt, sharepoint_em
        FROM historico ${where}
        ORDER BY criado_em DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
