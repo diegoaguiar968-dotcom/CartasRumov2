@@ -43,6 +43,9 @@ import {
   excluirHistoricoEntrada,
   baixarHistoricoDocx,
   registrarSharePoint,
+  getSharepointMode,
+  getFormsUrl,
+  type SharepointMode,
   getProximoNumero,
   numeroJaExiste,
   getAnttServidores,
@@ -236,6 +239,7 @@ export default function App() {
   const [copiado, setCopiado] = useState<string | null>(null);
   const [histTotal, setHistTotal] = useState(0);
   const [registrandoSP, setRegistrandoSP] = useState(false);
+  const [spMode, setSpMode] = useState<SharepointMode>("none");
   const HIST_PAGINA = 50;
 
   const steps = flowType === "espontanea" ? STEPS_ESPONTANEA : STEPS_RESPOSTA;
@@ -268,6 +272,7 @@ export default function App() {
         setAnttSuperintendencias(r.superintendencias);
       })
       .catch(() => {});
+    getSharepointMode().then(setSpMode).catch(() => {});
   }, []);
 
   const siglaParaNome = useMemo(
@@ -585,6 +590,19 @@ export default function App() {
       toast({ description: "Entrada excluída do histórico." });
     } catch {
       notificarErro("Erro ao excluir.");
+    }
+  }
+
+  async function abrirFormularioSharePoint(id: string) {
+    setRegistrandoSP(true);
+    try {
+      const url = await getFormsUrl(id);
+      window.open(url, "_blank", "noopener");
+      toast({ description: "Formulário aberto — revise os dados e clique em Enviar." });
+    } catch (e: any) {
+      notificarErro(e.message || "Não foi possível abrir o formulário.");
+    } finally {
+      setRegistrandoSP(false);
     }
   }
 
@@ -1468,26 +1486,33 @@ export default function App() {
                   <PrimaryButton onClick={() => reabrirDoHistorico(histDetalhe)}>
                     <PencilLine className="w-4 h-4" /> Reabrir para edição
                   </PrimaryButton>
-                  {histDetalhe.sharepoint_em ? (
-                    <span
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium"
-                      style={{ background: "hsl(var(--rumo-green) / 0.12)", color: "hsl(var(--rumo-green))" }}
-                    >
-                      <Share2 className="w-4 h-4" /> Registrado no SharePoint
-                      <button
-                        onClick={() => registrarNoSharePoint(histDetalhe.id)}
-                        disabled={registrandoSP}
-                        className="text-xs underline ml-1"
-                        style={{ background: "none", border: "none", color: "hsl(var(--text-muted))", cursor: "pointer" }}
-                      >
-                        registrar de novo
-                      </button>
-                    </span>
-                  ) : (
-                    <SecondaryButton onClick={() => registrarNoSharePoint(histDetalhe.id)} disabled={registrandoSP}>
-                      <Share2 className="w-4 h-4" /> {registrandoSP ? "Registrando…" : "Registrar no SharePoint"}
+                  {/* Registro no SharePoint — comportamento conforme o modo configurado */}
+                  {spMode === "forms" ? (
+                    <SecondaryButton onClick={() => abrirFormularioSharePoint(histDetalhe.id)} disabled={registrandoSP}>
+                      <Share2 className="w-4 h-4" /> {registrandoSP ? "Abrindo…" : "Registrar via formulário"}
                     </SecondaryButton>
-                  )}
+                  ) : spMode === "webhook" ? (
+                    histDetalhe.sharepoint_em ? (
+                      <span
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium"
+                        style={{ background: "hsl(var(--rumo-green) / 0.12)", color: "hsl(var(--rumo-green))" }}
+                      >
+                        <Share2 className="w-4 h-4" /> Registrado no SharePoint
+                        <button
+                          onClick={() => registrarNoSharePoint(histDetalhe.id)}
+                          disabled={registrandoSP}
+                          className="text-xs underline ml-1"
+                          style={{ background: "none", border: "none", color: "hsl(var(--text-muted))", cursor: "pointer" }}
+                        >
+                          registrar de novo
+                        </button>
+                      </span>
+                    ) : (
+                      <SecondaryButton onClick={() => registrarNoSharePoint(histDetalhe.id)} disabled={registrandoSP}>
+                        <Share2 className="w-4 h-4" /> {registrandoSP ? "Registrando…" : "Registrar no SharePoint"}
+                      </SecondaryButton>
+                    )
+                  ) : null}
                   <button
                     onClick={() => excluirDoHistorico(histDetalhe.id)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold"

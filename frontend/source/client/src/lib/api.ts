@@ -265,6 +265,25 @@ export async function registrarSharePoint(
   return res.json();
 }
 
+export type SharepointMode = "forms" | "webhook" | "none";
+
+export async function getSharepointMode(): Promise<SharepointMode> {
+  try {
+    const res = await req("/api/status");
+    const data = await res.json();
+    return (data.sharepointMode as SharepointMode) || "none";
+  } catch {
+    return "none";
+  }
+}
+
+export async function getFormsUrl(id: string): Promise<string> {
+  const res = await req(`/api/historico/${id}/forms-url`);
+  const data = await res.json();
+  if (!data.success || !data.url) throw new Error(data.message || "Formulário não configurado.");
+  return data.url;
+}
+
 export async function getProximoNumero(): Promise<{
   success: boolean;
   proximo: number | null;
