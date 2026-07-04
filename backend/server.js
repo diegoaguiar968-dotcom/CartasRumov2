@@ -14,6 +14,7 @@ const oficioRoutes = require('./routes/oficio');
 const minutaRoutes = require('./routes/minuta');
 const exportRoutes = require('./routes/export');
 const historicoRoutes = require('./routes/historico');
+const anttRoutes = require('./routes/antt');
 const { requestLogger } = require('./middleware/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { sessionMiddleware } = require('./middleware/session');
@@ -76,6 +77,7 @@ app.use('/api/oficio', oficioRoutes);
 app.use('/api/minuta', minutaRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/historico', historicoRoutes);
+app.use('/api/antt', anttRoutes);
 
 // ─── /historico: o histórico agora vive dentro do app (vagão 06) ───
 // Mantém o endereço antigo funcionando via redirect para o deep-link do frontend.

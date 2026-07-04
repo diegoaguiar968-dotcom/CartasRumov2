@@ -1,0 +1,939 @@
+{
+  "fonte": "ANTT — Quem é Quem (composição/superintendências)",
+  "atualizadoEm": "2026-07-03",
+  "superintendencias": [
+    {
+      "sigla": "SUSPI",
+      "nome": "Superintendência de Sustentabilidade, Pessoas e Inovação"
+    },
+    {
+      "sigla": "SUESP",
+      "nome": "Superintendência de Governança, Gestão da Estratégia e Informações"
+    },
+    {
+      "sigla": "SUPAS",
+      "nome": "Superintendência de Serviços de Transporte Rodoviário de Passageiros"
+    },
+    {
+      "sigla": "SUCON",
+      "nome": "Superintendência de Concessão da Infraestrutura"
+    },
+    {
+      "sigla": "SUFER",
+      "nome": "Superintendência de Transporte Ferroviário"
+    },
+    {
+      "sigla": "SUTEC",
+      "nome": "Superintendência de Tecnologia da Informação"
+    },
+    {
+      "sigla": "SUDEG",
+      "nome": "Superintendência de Gestão Administrativa"
+    }
+  ],
+  "servidores": [
+    {
+      "nome": "Cynthia Ruas Vieira Brayer",
+      "cargo": "Superintendente de Sustentabilidade, Pessoas e Inovação",
+      "sigla": "SUSPI",
+      "unidade": "Superintendência",
+      "email": "cynthia.vieira@antt.gov.br"
+    },
+    {
+      "nome": "Ana Beatriz Rodrigues Castro",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUSPI",
+      "unidade": "GAB-SUSPI",
+      "email": "ana.castro@antt.gov.br"
+    },
+    {
+      "nome": "Eduardo Caldas Rossi",
+      "cargo": "Gerente de Gestão Estratégica de Pessoas",
+      "sigla": "SUSPI",
+      "unidade": "GESPE",
+      "email": "eduardo.rossi@antt.gov.br"
+    },
+    {
+      "nome": "Daniel Oliveira Silva",
+      "cargo": "Coordenador de Legislação Aplicada e Apoio",
+      "sigla": "SUSPI",
+      "unidade": "COLEP",
+      "email": "daniel-o.silva@antt.gov.br"
+    },
+    {
+      "nome": "Clovis Gomes Junior",
+      "cargo": "Coordenador de Desenvolvimento de Pessoas",
+      "sigla": "SUSPI",
+      "unidade": "CDPES",
+      "email": "clovis.junior@antt.gov.br"
+    },
+    {
+      "nome": "Denise Rangel Tresca",
+      "cargo": "Coordenador de Saúde e Qualidade de Vida no Trabalho",
+      "sigla": "SUSPI",
+      "unidade": "CSQVT",
+      "email": "denise.tresca@antt.gov.br"
+    },
+    {
+      "nome": "Glauciane da Silva",
+      "cargo": "Coordenador de Pagamento de Pessoas",
+      "sigla": "SUSPI",
+      "unidade": "COPAG",
+      "email": "glauciane.silva@antt.gov.br"
+    },
+    {
+      "nome": "Vinícius Pinto Corrêa",
+      "cargo": "Coordenador de Frequência e Programa de Gestão de Desempenho",
+      "sigla": "SUSPI",
+      "unidade": "CFPGD",
+      "email": "vinicius.correa@antt.gov.br"
+    },
+    {
+      "nome": "Claude Soares Ribeiro de Araujo",
+      "cargo": "Gerente de Sustentabilidade e Inovação",
+      "sigla": "SUSPI",
+      "unidade": "GSUST",
+      "email": "claude.araujo@antt.gov.br"
+    },
+    {
+      "nome": "Paloma Campos do Nascimento",
+      "cargo": "Coordenador de Gestão da Sustentabilidade",
+      "sigla": "SUSPI",
+      "unidade": "COGES",
+      "email": "paloma.nascimento@antt.gov.br"
+    },
+    {
+      "nome": "Priscila de Andrade Pereira",
+      "cargo": "Coordenador de Inovação",
+      "sigla": "SUSPI",
+      "unidade": "CINOV",
+      "email": "priscila.pereira@antt.gov.br"
+    },
+    {
+      "nome": "Fernando Fernandes Fontes",
+      "cargo": "Coordenador de Sustentabilidade Nos Transportes",
+      "sigla": "SUSPI",
+      "unidade": "CSUST",
+      "email": "fernando.fontes@antt.gov.br"
+    },
+    {
+      "nome": "Lilian Morais de Oliveira",
+      "cargo": "Superintendente de Governança, Gestão da Estratégia e Informações",
+      "sigla": "SUESP",
+      "unidade": "Superintendência",
+      "email": "suesp@antt.gov.br"
+    },
+    {
+      "nome": "Levina Aparecida Machado Silva",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUESP",
+      "unidade": "GAB-SUESP",
+      "email": "levina.silva@antt.gov.br"
+    },
+    {
+      "nome": "Katia Matsumoto Tancon",
+      "cargo": "Gerente de Governança, Gestão e Planejamento",
+      "sigla": "SUESP",
+      "unidade": "GEGOP",
+      "email": "katia.tancon@antt.gov.br"
+    },
+    {
+      "nome": "Jefferson Fabricio Girão da Silva",
+      "cargo": "Coordenador de Gestão Estratégica e Governança",
+      "sigla": "SUESP",
+      "unidade": "CGGOV",
+      "email": "jefferson.silva@antt.gov.br"
+    },
+    {
+      "nome": "Siomar Caribe de Oliveira",
+      "cargo": "Coordenador(a) de Gestão de Projetos",
+      "sigla": "SUESP",
+      "unidade": "CGESP",
+      "email": "siomar.oliveira@antt.gov.br"
+    },
+    {
+      "nome": "Roberto Omena Barbosa da Silva",
+      "cargo": "Coordenador de Gestão de Processos Organizacionais",
+      "sigla": "SUESP",
+      "unidade": "CGPRO",
+      "email": "roberto.silva@antt.gov.br"
+    },
+    {
+      "nome": "Diogenes Eustaquio Rezende Correia",
+      "cargo": "Coordenador de Governança Regulatória",
+      "sigla": "SUESP",
+      "unidade": "CGREG",
+      "email": "diogenes.correia@antt.gov.br"
+    },
+    {
+      "nome": "Roberta de Freitas Chamusca",
+      "cargo": "Coordenador de Melhoria Regulatória",
+      "sigla": "SUESP",
+      "unidade": "COMEG",
+      "email": "roberta.chamusca@antt.gov.br"
+    },
+    {
+      "nome": "Victor Haselmann Arakawa",
+      "cargo": "Gerente de Governança e Estratégia da Informação",
+      "sigla": "SUESP",
+      "unidade": "GEINF",
+      "email": "victor.arakawa@antt.gov.br"
+    },
+    {
+      "nome": "Dalton da Silva Neiva",
+      "cargo": "Coordenador de Inteligência",
+      "sigla": "SUESP",
+      "unidade": "COINT",
+      "email": "dalton.neiva@antt.gov.br"
+    },
+    {
+      "nome": "Francisco Leonardo Carvalho Sousa",
+      "cargo": "Coordenador de Contrainteligência e Monitoramento de Eventos Adversos",
+      "sigla": "SUESP",
+      "unidade": "CCINT",
+      "email": "francisco.sousa@antt.gov.br"
+    },
+    {
+      "nome": "Cristiano Hauck Civitarese",
+      "cargo": "Coordenador de Ciência de Dados e Gestão da Informação",
+      "sigla": "SUESP",
+      "unidade": "CGINF",
+      "email": "cristiano.civitarese@antt.gov.br"
+    },
+    {
+      "nome": "Emerson Perez",
+      "cargo": "Coordenador de Gestão do Conhecimento e Apoio à Tomada de Decisão",
+      "sigla": "SUESP",
+      "unidade": "CGCON",
+      "email": "emerson.perez@antt.gov.br"
+    },
+    {
+      "nome": "Juliano de Barros Samôr",
+      "cargo": "Superintendente de Serviços de Transporte Rodoviário de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "Superintendência",
+      "email": "supas@antt.gov.br"
+    },
+    {
+      "nome": "Rodrigo Pinto Igreja",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUPAS",
+      "unidade": "GAB-SUPAS",
+      "email": "rodrigo.igreja@antt.gov.br"
+    },
+    {
+      "nome": "Anderson Lousan do Nascimento Poubel",
+      "cargo": "Gerente de Estudos e Regulação do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "GEEST",
+      "email": "anderson.poubel@antt.gov.br"
+    },
+    {
+      "nome": "Jefferson Artur Sardeiro Bezerra dos Santos",
+      "cargo": "Coordenador de Análise Regulatória do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "COARP",
+      "email": "jefferson-a.santos@antt.gov.br"
+    },
+    {
+      "nome": "Anderson Paulino Araujo Couto",
+      "cargo": "Coordenador de Análise Técnica do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "COANP",
+      "email": "anderson.couto@antt.gov.br"
+    },
+    {
+      "nome": "Igor Filipe Eugenio",
+      "cargo": "Coordenador de Gestão Econômico-Financeira do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "COGEF",
+      "email": "igor.eugenio@antt.gov.br"
+    },
+    {
+      "nome": "Otto Amaury de Carvalho Alves",
+      "cargo": "Coordenador de Gestão e Outorgas do Transporte Semiurbano de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "COTOP",
+      "email": "otto.alves@antt.gov.br"
+    },
+    {
+      "nome": "Renato de Miranda Santos",
+      "cargo": "Gerente de Monitoramento de Serviços e Projetos Especiais do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "GEMON",
+      "email": "renato.santos@antt.gov.br"
+    },
+    {
+      "nome": "Luciely de Lima Alves Martins",
+      "cargo": "Coordenador de Gerenciamento de Projetos e Informações do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "CINFP",
+      "email": "luciely.martins@antt.gov.br"
+    },
+    {
+      "nome": "Clóvis de Carvalho Torres",
+      "cargo": "Coordenador de Tratamento de Dados e Monitoramento do Transporte de Passageiros (substituto Exercendo)",
+      "sigla": "SUPAS",
+      "unidade": "CODAM",
+      "email": "clovis.torres@antt.gov.br"
+    },
+    {
+      "nome": "Kartney Carvalho de Sousa",
+      "cargo": "Coordenador de Projetos Especiais Tecnológicos do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "COTEC",
+      "email": "kartney.sousa@antt.gov.br"
+    },
+    {
+      "nome": "Juliana Esteves Lima de Oliveira",
+      "cargo": "Gerente Operacional de Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "GEOPE",
+      "email": "juliana.oliveira@antt.gov.br"
+    },
+    {
+      "nome": "Tania Francisco Alves",
+      "cargo": "Coordenador de Autorizações e Operações do Transporte de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "CTRIP",
+      "email": "tania.francisco@antt.gov.br"
+    },
+    {
+      "nome": "Alessandra Misse",
+      "cargo": "Coordenador de Cadastro do Transporte Interestadual de Passageiros",
+      "sigla": "SUPAS",
+      "unidade": "COCAD",
+      "email": "alessandra.misse@antt.gov.br"
+    },
+    {
+      "nome": "Cleber Ferreira Rodrigues",
+      "cargo": "Coordenador de Taxa de Fiscalização e Suporte Ao Contencioso",
+      "sigla": "SUPAS",
+      "unidade": "COTAX",
+      "email": "cleber.rodrigues@antt.gov.br"
+    },
+    {
+      "nome": "Ismael Souza Silva",
+      "cargo": "Coordenador de Autorizações e Operações do Transporte Internacional de Passageiro",
+      "sigla": "SUPAS",
+      "unidade": "COTIN",
+      "email": "ismael.silva@antt.gov.br"
+    },
+    {
+      "nome": "Rossiele e Silva Ferraz Formiga",
+      "cargo": "Coordenador do Passe Livre",
+      "sigla": "SUPAS",
+      "unidade": "COLIV",
+      "email": "rossiele.ferraz@antt.gov.br"
+    },
+    {
+      "nome": "Marcelo Cardoso Fonseca",
+      "cargo": "Superintendente de Concessão da Infraestrutura",
+      "sigla": "SUCON",
+      "unidade": "Superintendência",
+      "email": "sucon@antt.gov.br"
+    },
+    {
+      "nome": "Soraia Fucina Amaral",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUCON",
+      "unidade": "GAB-SUCON",
+      "email": "soraia.amaral@antt.gov.br"
+    },
+    {
+      "nome": "Danielle de Sá Quirino Costa",
+      "cargo": "Gerente de Estruturação Regulatória",
+      "sigla": "SUCON",
+      "unidade": "GEREG",
+      "email": "stephane.quebaud@antt.gov.br"
+    },
+    {
+      "nome": "Rodrigo Freisleben Lacerda",
+      "cargo": "Coordenador de Estruturação Regulatória 1",
+      "sigla": "SUCON",
+      "unidade": "COEST1",
+      "email": "rodrigo.lacerda@antt.gov.br"
+    },
+    {
+      "nome": "Felipe do Amaral Costa",
+      "cargo": "Coordenador de Estruturação Regulatória 2",
+      "sigla": "SUCON",
+      "unidade": "COEST2",
+      "email": "felipe.amaral@antt.gov.br"
+    },
+    {
+      "nome": "Renata Batista Junqueira Nogueira",
+      "cargo": "Coordenador de Estruturação Regulatória 3",
+      "sigla": "SUCON",
+      "unidade": "COEST3",
+      "email": "renata.nogueira@antt.gov.br"
+    },
+    {
+      "nome": "Alessandro Geremia",
+      "cargo": "Coordenador de Estruturação Regulatória 4",
+      "sigla": "SUCON",
+      "unidade": "COEST4",
+      "email": "alessandro.geremia@antt.gov.br"
+    },
+    {
+      "nome": "Lorena Cristina Martins Batista Duarte",
+      "cargo": "Gerente de Estudos e Projetos de Ferrovias",
+      "sigla": "SUCON",
+      "unidade": "GEFER",
+      "email": "lorena.duarte@antt.gov.br"
+    },
+    {
+      "nome": "Huber Ribeiro Tokunaga",
+      "cargo": "Coordenador de Estudos e Projetos de Ferrovias 1",
+      "sigla": "SUCON",
+      "unidade": "CEFER1",
+      "email": "huber.tokunaga@antt.gov.br"
+    },
+    {
+      "nome": "Carlos Alexandre da Silva Nader Motta",
+      "cargo": "Coordenador de Estudos e Projetos de Ferrovias 2",
+      "sigla": "SUCON",
+      "unidade": "CEFER2",
+      "email": "carlos.motta@antt.gov.br"
+    },
+    {
+      "nome": "Stéphane Louis Georges Quebaud",
+      "cargo": "Gerente de Estudos e Projetos de Rodovias",
+      "sigla": "SUCON",
+      "unidade": "GEROD",
+      "email": "stephane.quebaud@antt.gov.br"
+    },
+    {
+      "nome": "Eugenio Jose Saraiva Camara Costa",
+      "cargo": "Coordenador de Estudos e Projetos de Rodovias 1",
+      "sigla": "SUCON",
+      "unidade": "CEROD1",
+      "email": "eugenio.costa@antt.gov.br"
+    },
+    {
+      "nome": "Yasmin Yorrane Duarte",
+      "cargo": "Coordenador de Estudos e Projetos de Rodovias 2",
+      "sigla": "SUCON",
+      "unidade": "CEROD2",
+      "email": "yasmin.duarte@antt.gov.br"
+    },
+    {
+      "nome": "Alessandro Baumgartner",
+      "cargo": "Superintendente de Transporte Ferroviário",
+      "sigla": "SUFER",
+      "unidade": "Superintendência",
+      "email": "sufer@antt.gov.br"
+    },
+    {
+      "nome": "Mariana Geórgia de Oliveira Sánchez",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUFER",
+      "unidade": "GAB-SUFER",
+      "email": "mariana.sanchez@antt.gov.br"
+    },
+    {
+      "nome": "Ana Claudia Silveira Torres",
+      "cargo": "Gerente de Projetos Ferroviários",
+      "sigla": "SUFER",
+      "unidade": "GEPEF",
+      "email": "ana.torres@antt.gov.br"
+    },
+    {
+      "nome": "Christophe de Morais Porto",
+      "cargo": "Coordenador de Análise de Projetos e Investimentos Ferroviários",
+      "sigla": "SUFER",
+      "unidade": "COAPI",
+      "email": "christophe.porto@antt.gov.br"
+    },
+    {
+      "nome": "Maiara Oliveira Batista",
+      "cargo": "Coordenador de Autorizações Ferroviárias",
+      "sigla": "SUFER",
+      "unidade": "COAUF",
+      "email": "maiara.batista@antt.gov.br"
+    },
+    {
+      "nome": "Paulo Fábio da Silva Eugênio",
+      "cargo": "Coordenador de Planos de Investimento de Infraestrutura Ferroviária",
+      "sigla": "SUFER",
+      "unidade": "CPINF",
+      "email": "paulo.eugenio@antt.gov.br"
+    },
+    {
+      "nome": "Daniel de Oliveira Santos",
+      "cargo": "Gerente de Fiscalização de Infraestrutura e Serviços",
+      "sigla": "SUFER",
+      "unidade": "GECOF",
+      "email": "daniel-o.santos@antt.gov.br"
+    },
+    {
+      "nome": "Anna Paola Alleone Luksevicius",
+      "cargo": "Coordenador de Planejamento da Fiscalização e Meio Ambiente",
+      "sigla": "SUFER",
+      "unidade": "CSFER",
+      "email": "anna.paola@antt.gov.br"
+    },
+    {
+      "nome": "Luís Carlos de Oliveira Taques",
+      "cargo": "Coordenador de Ativos e Investimentos",
+      "sigla": "SUFER",
+      "unidade": "CIFER",
+      "email": "luis.taques@antt.gov.br"
+    },
+    {
+      "nome": "Leandro Fraga Guimarães",
+      "cargo": "Coordenador de Gestão de Processo Administrativo Sancionador Ferroviário",
+      "sigla": "SUFER",
+      "unidade": "CPFER",
+      "email": "leandro.guimaraes@antt.gov.br"
+    },
+    {
+      "nome": "Icaro Sousa Araujo",
+      "cargo": "Coordenador Regional de Fiscalização Ferroviária Ceará",
+      "sigla": "SUFER",
+      "unidade": "COFER-CE",
+      "email": "icaro.araujo@antt.gov.br"
+    },
+    {
+      "nome": "Atila Moreira Martins",
+      "cargo": "Supervisor de Fiscalização - Fortaleza/Ce",
+      "sigla": "SUFER",
+      "unidade": "ESFER-FOR/CE",
+      "email": "atila.martins@antt.gov.br"
+    },
+    {
+      "nome": "Marcos Aurelio Pires Sampaio Ferreira",
+      "cargo": "Supervisor de Fiscalização - Palmas/To",
+      "sigla": "SUFER",
+      "unidade": "ESFER-PALMAS/TO",
+      "email": "marcos.ferreira@antt.gov.br"
+    },
+    {
+      "nome": "Antonio Ricardo Pereira de Jesus",
+      "cargo": "Supervisor de Fiscalização - Recife/Pe",
+      "sigla": "SUFER",
+      "unidade": "ESFER-RECIFE/PE",
+      "email": "antonio.jesus@antt.gov.br"
+    },
+    {
+      "nome": "Romulo Augustulo Monteles da Silva",
+      "cargo": "Supervisor de Fiscalização - São Luis/Ma",
+      "sigla": "SUFER",
+      "unidade": "ESFER-SLZ/MA",
+      "email": "romulo.augustulo@antt.gov.br"
+    },
+    {
+      "nome": "Aurelio Ferreira Braga",
+      "cargo": "Coordenador Regional de Fiscalização Ferroviária Minas Gerais",
+      "sigla": "SUFER",
+      "unidade": "COFER-MG",
+      "email": "aurelio.braga@antt.gov.br"
+    },
+    {
+      "nome": "Pedro Carlos de Alcantara Fabiano",
+      "cargo": "Supervisor de Fiscalização - Belo Horizonte/Mg",
+      "sigla": "SUFER",
+      "unidade": "ESFER-BHZ/MG",
+      "email": "pedro.fabiano@antt.gov.br"
+    },
+    {
+      "nome": "Mauro Simoes de Almeida",
+      "cargo": "Supervisor de Fiscalização - Rio de Janeiro/Rj",
+      "sigla": "SUFER",
+      "unidade": "ESFER-RIO/RJ",
+      "email": "mauro.almeida@antt.gov.br"
+    },
+    {
+      "nome": "Andre Luis Oliveira de Melo",
+      "cargo": "Supervisor de Fiscalização - Salvador/Ba",
+      "sigla": "SUFER",
+      "unidade": "ESFER-SSA/BA",
+      "email": "andre.melo@antt.gov.br"
+    },
+    {
+      "nome": "Paulo Jorge Costa",
+      "cargo": "Supervisor de Fiscalização - Vitória/Es",
+      "sigla": "SUFER",
+      "unidade": "ESFER-VIX/ES",
+      "email": "paulo.jorge@antt.gov.br"
+    },
+    {
+      "nome": "Felipe Ferreira de Ferreira",
+      "cargo": "Coordenador Regional de Fiscalização Ferroviária Santa Catarina",
+      "sigla": "SUFER",
+      "unidade": "COFER-SC",
+      "email": "felipe.deferreira@antt.gov.br"
+    },
+    {
+      "nome": "Genivaldo Fantim de Melo",
+      "cargo": "Supervisor de Fiscalização - Curitiba/Pr",
+      "sigla": "SUFER",
+      "unidade": "ESFER-CWB/PR",
+      "email": "genivaldo.melo@antt.gov.br"
+    },
+    {
+      "nome": "Rodrigo Pereira De Castro",
+      "cargo": "Supervisor de Fiscalização - Florianópolis/Sc",
+      "sigla": "SUFER",
+      "unidade": "ESFER-FLN/SC",
+      "email": "rodrigo.castro@antt.gov.br"
+    },
+    {
+      "nome": "Mario Augusto da Cunha Flores",
+      "cargo": "Supervisor de Fiscalização - Poa/Rs",
+      "sigla": "SUFER",
+      "unidade": "ESFER-POA/RS",
+      "email": "mario.flores@antt.gov.br"
+    },
+    {
+      "nome": "Marcelo Jose Barbosa Amorelli",
+      "cargo": "Coordenador Regional de Fiscalização Ferroviária São Paulo",
+      "sigla": "SUFER",
+      "unidade": "COFER-SP",
+      "email": "marcelo.amorelli@antt.gov.br"
+    },
+    {
+      "nome": "Daniel Alfredo Alves Miguel",
+      "cargo": "Supervisor de Fiscalização - Campinas/Sp",
+      "sigla": "SUFER",
+      "unidade": "ESFER-CAMP/SP",
+      "email": "daniel.miguel@antt.gov.br"
+    },
+    {
+      "nome": "Roberto Silva",
+      "cargo": "Supervisor de Fiscalização - São Paulo/Sp",
+      "sigla": "SUFER",
+      "unidade": "ESFER-SPAULO/SP",
+      "email": "roberto.rs.silva@antt.gov.br"
+    },
+    {
+      "nome": "Luiz Carlos Alexandrino Lima",
+      "cargo": "Supervisor de Fiscalização - Goiânia/Go",
+      "sigla": "SUFER",
+      "unidade": "ESFER-GYN/GO",
+      "email": "luiz-c.lima@antt.gov.br"
+    },
+    {
+      "nome": "José Expedito Brandão Filho",
+      "cargo": "Gerente de Fiscalização Econômico-Financeira",
+      "sigla": "SUFER",
+      "unidade": "GEFEF",
+      "email": "jose.brandao.filho@antt.gov.br"
+    },
+    {
+      "nome": "Elisia Teresinha Engelmann Muller",
+      "cargo": "Coordenador de Fiscalização e Processamento de Infrações",
+      "sigla": "SUFER",
+      "unidade": "COFEF",
+      "email": "elisia.engelmann@antt.gov.br"
+    },
+    {
+      "nome": "Herlis Gomes Peixoto Junior",
+      "cargo": "Coordenador de Cobrança e Equilíbrio Econômico-Financeiro",
+      "sigla": "SUFER",
+      "unidade": "COCEF",
+      "email": "herlis.junior@antt.gov.br"
+    },
+    {
+      "nome": "Fernando Barbelli Feitosa",
+      "cargo": "Gerente de Regulação Ferroviária",
+      "sigla": "SUFER",
+      "unidade": "GEREF",
+      "email": "fernando.feitosa@antt.gov.br"
+    },
+    {
+      "nome": "Marcela Fraga Nunes Pereira",
+      "cargo": "Coordenador de Atos Normativos",
+      "sigla": "SUFER",
+      "unidade": "CONOR",
+      "email": "marcela.pereira@antt.gov.br"
+    },
+    {
+      "nome": "Alexssander Jean Santos Bezerra",
+      "cargo": "Coordenador de Defesa da Concorrência / Relações com Usuários e Modelagem de Autorizações",
+      "sigla": "SUFER",
+      "unidade": "CRUMA",
+      "email": "alexssander.bezerra@antt.gov.br"
+    },
+    {
+      "nome": "Marianne Trindade Câmara",
+      "cargo": "Coordenador de Acompanhamento de Mercado",
+      "sigla": "SUFER",
+      "unidade": "COAME",
+      "email": "marianne.camara@antt.gov.br"
+    },
+    {
+      "nome": "Sergio Bezerra de Menezes Rodrigues",
+      "cargo": "Coordenador de Estudos Técnicos de Infraestrutura Ferroviária",
+      "sigla": "SUFER",
+      "unidade": "COETI",
+      "email": "sergio.rodrigues@antt.gov.br"
+    },
+    {
+      "nome": "Kleber Campos Rodrigues Filho",
+      "cargo": "Superintendente de Tecnologia da Informação",
+      "sigla": "SUTEC",
+      "unidade": "Superintendência",
+      "email": "sutec@antt.gov.br"
+    },
+    {
+      "nome": "Denise Barros de Sousa Nogueira",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUTEC",
+      "unidade": "GAB-SUTEC",
+      "email": "denise.nogueira@antt.gov.br"
+    },
+    {
+      "nome": "Marcos Paulo Milanez Santana",
+      "cargo": "Gerente de Infraestrutura Tecnológica",
+      "sigla": "SUTEC",
+      "unidade": "GETIC",
+      "email": "marcos.milanez@antt.gov.br"
+    },
+    {
+      "nome": "Ricardo Lazaro de Oliveira",
+      "cargo": "Coordenador de Sustentação de Infraestrutura Tecnológica e de Segurança da Informação",
+      "sigla": "SUTEC",
+      "unidade": "COSIT",
+      "email": "ricardo.lazaro@antt.gov.br"
+    },
+    {
+      "nome": "Jose Edson de Sena Junior",
+      "cargo": "Coordenador de Apoio e Comunicação Tecnológica",
+      "sigla": "SUTEC",
+      "unidade": "COATI",
+      "email": "jose.sena@antt.gov.br"
+    },
+    {
+      "nome": "Julio Cesar Signorini",
+      "cargo": "Gerente de Sistemas de Informação",
+      "sigla": "SUTEC",
+      "unidade": "GESIN",
+      "email": "julio.signorini@antt.gov.br"
+    },
+    {
+      "nome": "André Botin Nascimento",
+      "cargo": "Coordenador de Sistemas de Informação",
+      "sigla": "SUTEC",
+      "unidade": "COSIP",
+      "email": "andre.nascimento@antt.gov.br"
+    },
+    {
+      "nome": "Cristiane Sousa de Oliveira",
+      "cargo": "Coordenador de Arquitetura, Garantia e Qualidade dos Projetos",
+      "sigla": "SUTEC",
+      "unidade": "COGEP",
+      "email": "cristiane-s.oliveira@antt.gov.br"
+    },
+    {
+      "nome": "Bruno de Sá Guimarães",
+      "cargo": "Gerente do Centro Nacional de Supervisão Operacional",
+      "sigla": "SUTEC",
+      "unidade": "GCNSO",
+      "email": "bruno.guimaraes@antt.gov.br"
+    },
+    {
+      "nome": "Túlio César de Araújo Porto",
+      "cargo": "Coordenador de Estratégia de Dados",
+      "sigla": "SUTEC",
+      "unidade": "CESTD",
+      "email": "tulio.porto@antt.gov.br"
+    },
+    {
+      "nome": "Gedielson Arnaldo Schmitt",
+      "cargo": "Coordenador de Supervisão Operacional e de Estruturação de Informações",
+      "sigla": "SUTEC",
+      "unidade": "CESTI",
+      "email": "gedielson.schimitt@antt.gov.br"
+    },
+    {
+      "nome": "Eduardo José Marra",
+      "cargo": "Superintendente de Gestão Administrativa",
+      "sigla": "SUDEG",
+      "unidade": "Superintendência",
+      "email": "sudeg@antt.gov.br"
+    },
+    {
+      "nome": "Clarissa Fernandes dos Santos",
+      "cargo": "Chefe de Gabinete",
+      "sigla": "SUDEG",
+      "unidade": "GAB-SUDEG",
+      "email": "clarissa.santos@antt.gov.br"
+    },
+    {
+      "nome": "Fábia Maria do Nascimento",
+      "cargo": "Gerente de Planejamento, Orçamento, Finanças e Contabilidade",
+      "sigla": "SUDEG",
+      "unidade": "GEORF",
+      "email": "fabia.nascimento@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Gestão e Execução Orçamentária",
+      "sigla": "SUDEG",
+      "unidade": "CGORC",
+      "email": ""
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Programação e Execução Financeira",
+      "sigla": "SUDEG",
+      "unidade": "COFIN",
+      "email": ""
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Arrecadação",
+      "sigla": "SUDEG",
+      "unidade": "CODAR",
+      "email": ""
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Contabilidade",
+      "sigla": "SUDEG",
+      "unidade": "CCONT",
+      "email": ""
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Diárias e Passagens",
+      "sigla": "SUDEG",
+      "unidade": "CODEP",
+      "email": "andre.buss@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Conformidade de Registro de Gestão",
+      "sigla": "SUDEG",
+      "unidade": "CORGE",
+      "email": "adao.formiga@antt.gov.br"
+    },
+    {
+      "nome": "Cláudia Fátima da Fonseca Alves",
+      "cargo": "Gerente de Recursos Logísticos",
+      "sigla": "SUDEG",
+      "unidade": "GELOG",
+      "email": "claudia.alves@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Infraestrutura e Serviços",
+      "sigla": "SUDEG",
+      "unidade": "CINFS",
+      "email": "frederico.vieira@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Planejamento de Compras e Serviços",
+      "sigla": "SUDEG",
+      "unidade": "CPLAS",
+      "email": "beatriz.fernandes@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Gestão de Bens, Materiais e Segurança Predial",
+      "sigla": "SUDEG",
+      "unidade": "CBSEG",
+      "email": "joabe.cunha@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Gestão Documental e Processo Eletrônico",
+      "sigla": "SUDEG",
+      "unidade": "CGDOC",
+      "email": "karla-k.carmo@antt.gov.br"
+    },
+    {
+      "nome": "(sem titular divulgado no site)",
+      "cargo": "Coordenação de Transporte e Gestão de Frota",
+      "sigla": "SUDEG",
+      "unidade": "COTRAN",
+      "email": "alexandre.magro@antt.gov.br"
+    },
+    {
+      "nome": "André Luís Buss",
+      "cargo": "Gerente de Licitações e Contratos",
+      "sigla": "SUDEG",
+      "unidade": "GELIC",
+      "email": "andre.buss@antt.gov.br"
+    },
+    {
+      "nome": "Adão Cabral Formiga",
+      "cargo": "Coordenador de Licitações e Contratações Diretas",
+      "sigla": "SUDEG",
+      "unidade": "COLIC",
+      "email": "adao.formiga@antt.gov.br"
+    },
+    {
+      "nome": "Robson de Barros Villa Neto",
+      "cargo": "Coordenador de Gestão Administrativa de Contratos",
+      "sigla": "SUDEG",
+      "unidade": "CGEAC",
+      "email": "robson.neto@antt.gov.br"
+    },
+    {
+      "nome": "Frederico Luiz Vieira",
+      "cargo": "Coordenador de Gestão Econômico-Financeira de Contratos",
+      "sigla": "SUDEG",
+      "unidade": "COEFI",
+      "email": "frederico.vieira@antt.gov.br"
+    },
+    {
+      "nome": "Beatriz Pimenta Fernandes",
+      "cargo": "Coordenador de Análise e Aplicação de Sanções Administrativas e Apoio Ao Contencioso",
+      "sigla": "SUDEG",
+      "unidade": "COAPS",
+      "email": "beatriz.fernandes@antt.gov.br"
+    },
+    {
+      "nome": "Joabe Eder de Morais Cunha",
+      "cargo": "Coordenador de Conformidade e Acompanhamento de Execução Contratual",
+      "sigla": "SUDEG",
+      "unidade": "CCONE",
+      "email": "joabe.cunha@antt.gov.br"
+    },
+    {
+      "nome": "Karla Kelma Bastos Santa Rosa do Carmo",
+      "cargo": "Gerente de Processamento e Cobrança de Auto de Infração",
+      "sigla": "SUDEG",
+      "unidade": "GEAUT",
+      "email": "karla-k.carmo@antt.gov.br"
+    },
+    {
+      "nome": "Alexandre Moacir Magro",
+      "cargo": "Coordenador de Gestão Processual",
+      "sigla": "SUDEG",
+      "unidade": "CPROC",
+      "email": "alexandre.magro@antt.gov.br"
+    },
+    {
+      "nome": "Rafael Moya Fernandes Lopes",
+      "cargo": "Coordenador de Análise de Defesa em Primeira Instância",
+      "sigla": "SUDEG",
+      "unidade": "COADE",
+      "email": "rafael.lopes@antt.gov.br"
+    },
+    {
+      "nome": "Fernando Maximo Camargo dos Santos",
+      "cargo": "Coordenador de Análise Recursal de Segunda Instância",
+      "sigla": "SUDEG",
+      "unidade": "COASI",
+      "email": "fernando.santos@antt.gov.br"
+    },
+    {
+      "nome": "Sandro Rogério Fuloni Carvalho",
+      "cargo": "Coordenador de Cobrança Administrativa",
+      "sigla": "SUDEG",
+      "unidade": "CCOBI",
+      "email": "ccobi@antt.gov.br"
+    },
+    {
+      "nome": "Leandro Paiva de Oliveira",
+      "cargo": "Coordenador de Processamento de Autos de Trânsito",
+      "sigla": "SUDEG",
+      "unidade": "COPAT",
+      "email": "leandro-p.oliveira@antt.gov.br"
+    }
+  ]
+}
