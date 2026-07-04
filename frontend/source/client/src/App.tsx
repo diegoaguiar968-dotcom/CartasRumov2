@@ -20,6 +20,7 @@ import {
   Trash2,
   PencilLine,
   RefreshCw,
+  Share2,
 } from "lucide-react";
 import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
 import { InfoCard, PrimaryButton, SecondaryButton, TextField } from "./components/ui-kit";
@@ -41,6 +42,7 @@ import {
   getHistoricoDetalhe,
   excluirHistoricoEntrada,
   baixarHistoricoDocx,
+  registrarSharePoint,
   getProximoNumero,
   numeroJaExiste,
   getAnttServidores,
@@ -233,6 +235,7 @@ export default function App() {
   const [histMinutaAberta, setHistMinutaAberta] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
   const [histTotal, setHistTotal] = useState(0);
+  const [registrandoSP, setRegistrandoSP] = useState(false);
   const HIST_PAGINA = 50;
 
   const steps = flowType === "espontanea" ? STEPS_ESPONTANEA : STEPS_RESPOSTA;
@@ -442,10 +445,11 @@ export default function App() {
       } catch {
         /* verificação indisponível — segue o download normalmente */
       }
-      const { responsavel, area } = getResponsavel();
+      const { responsavel, area, email } = getResponsavel();
       const nome = await downloadDocx(numeroCarta, minutaTexto, {
         ...minutaMeta,
         responsavel,
+        responsavelEmail: email,
         area,
       });
       toast({ description: `Carta baixada: ${nome}` });
@@ -581,6 +585,27 @@ export default function App() {
       toast({ description: "Entrada excluída do histórico." });
     } catch {
       notificarErro("Erro ao excluir.");
+    }
+  }
+
+  async function registrarNoSharePoint(id: string) {
+    setRegistrandoSP(true);
+    try {
+      const r = await registrarSharePoint(id);
+      if (!r.success) {
+        notificarErro(r.message || "Não foi possível registrar no SharePoint.");
+        return;
+      }
+      toast({
+        description: r.itemUrl ? "Carta registrada no SharePoint." : "Carta enviada ao SharePoint.",
+      });
+      const quando = r.registradoEm || new Date().toISOString();
+      setHistDetalhe((d) => (d ? { ...d, sharepoint_em: quando } : d));
+      carregarHistorico();
+    } catch (e: any) {
+      notificarErro(e.message || "Erro ao registrar no SharePoint.");
+    } finally {
+      setRegistrandoSP(false);
     }
   }
 
@@ -1443,6 +1468,26 @@ export default function App() {
                   <PrimaryButton onClick={() => reabrirDoHistorico(histDetalhe)}>
                     <PencilLine className="w-4 h-4" /> Reabrir para edição
                   </PrimaryButton>
+                  {histDetalhe.sharepoint_em ? (
+                    <span
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium"
+                      style={{ background: "hsl(var(--rumo-green) / 0.12)", color: "hsl(var(--rumo-green))" }}
+                    >
+                      <Share2 className="w-4 h-4" /> Registrado no SharePoint
+                      <button
+                        onClick={() => registrarNoSharePoint(histDetalhe.id)}
+                        disabled={registrandoSP}
+                        className="text-xs underline ml-1"
+                        style={{ background: "none", border: "none", color: "hsl(var(--text-muted))", cursor: "pointer" }}
+                      >
+                        registrar de novo
+                      </button>
+                    </span>
+                  ) : (
+                    <SecondaryButton onClick={() => registrarNoSharePoint(histDetalhe.id)} disabled={registrandoSP}>
+                      <Share2 className="w-4 h-4" /> {registrandoSP ? "Registrando…" : "Registrar no SharePoint"}
+                    </SecondaryButton>
+                  )}
                   <button
                     onClick={() => excluirDoHistorico(histDetalhe.id)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold"

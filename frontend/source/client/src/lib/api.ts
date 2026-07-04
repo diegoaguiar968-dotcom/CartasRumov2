@@ -195,6 +195,8 @@ export interface HistoricoEntrada {
   signatario_antt: string;
   cargo_antt: string;
   minuta?: string;
+  responsavel_email?: string;
+  sharepoint_em?: string | null;
 }
 
 export async function getHistorico(
@@ -256,6 +258,13 @@ export async function baixarHistoricoDocx(id: string): Promise<string> {
   return nome;
 }
 
+export async function registrarSharePoint(
+  id: string
+): Promise<{ success: boolean; itemUrl?: string | null; registradoEm?: string; message?: string }> {
+  const res = await req(`/api/historico/${id}/sharepoint`, { method: "POST" });
+  return res.json();
+}
+
 export async function getProximoNumero(): Promise<{
   success: boolean;
   proximo: number | null;
@@ -275,7 +284,7 @@ export async function numeroJaExiste(numero: string): Promise<boolean> {
 export async function downloadDocx(
   numeroOficio: string,
   conteudo: string,
-  meta: Partial<MinutaMeta> & { responsavel?: string; area?: string; orgao?: string }
+  meta: Partial<MinutaMeta> & { responsavel?: string; responsavelEmail?: string; area?: string; orgao?: string }
 ): Promise<string> {
   const res = await req("/api/export/docx", {
     method: "POST",
