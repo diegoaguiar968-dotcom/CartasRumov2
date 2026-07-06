@@ -49,8 +49,9 @@ async function formsUrl(req, res, next) {
       ZZPROCESSOZZ: e.processo || '',
       ZZAREAZZ: e.area || '',
       ZZFORMAZZ: e.forma_envio || 'SEI',
-      ZZASSUNTOSZZ: e.assuntos || 'Resposta Ofício',
+      ZZASSUNTOSZZ: e.assuntos || 'resposta a ofício',
       ZZRESPONSAVELZZ: e.responsavel || '',
+      ZZEMAILZZ: e.responsavel_email || '',
     };
 
     let url = template;

@@ -16,24 +16,47 @@ não vai junto** pelo formulário (anexe manualmente se precisar).
 
 ---
 
+## As 14 colunas da lista — o que o ARCA preenche
+
+| Coluna | ARCA preenche? | Sentinela / observação |
+|---|---|---|
+| Número da Carta | ✅ | `ZZTITULOZZ` (0000/GREG/2026) |
+| E-mail do Responsável | ✅ | `ZZEMAILZZ` |
+| Área do Responsável | ✅ | `ZZAREAZZ` |
+| Data de envio | ⬜ | preencher após protocolar no SEI |
+| Tema | ✅ | `ZZTEMAZZ` |
+| Órgão | ✅ | `ZZORGAOZZ` (ANTT) |
+| Malha | ✅ | `ZZMALHAZZ` — opções: RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas |
+| Ofício | ✅ | `ZZOFICIOZZ` |
+| Dilação? | ⬜ | Sim/Não — após |
+| Prazo com Dilação | ⬜ | após |
+| Forma de Envio | ✅ | `ZZFORMAZZ` — opções: SEI, E-mail, Presencialmente (padrão SEI) |
+| Protocolo | ⬜ | após |
+| Número do Processo | ✅ | `ZZPROCESSOZZ` |
+| Assuntos | ✅ | `ZZASSUNTOSZZ` — opções: patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, resposta a ofício, outro |
+
+Sentinela extra: `ZZRESPONSAVELZZ` (nome do responsável), `ZZORGAOZZ`.
+
 ## Passo 1 — Criar o Microsoft Form
 
-Crie um formulário com **uma pergunta de texto por coluna** que o ARCA preenche:
+Crie **uma pergunta por coluna que o ARCA preenche** (as demais — Data de envio,
+Dilação?, Prazo com Dilação, Protocolo — ficam de fora do Form; são preenchidas
+na lista após protocolar):
 
-| Pergunta (sugestão) | Vai para a coluna |
-|---|---|
-| Título | Título |
-| Tema | Tema |
-| Órgão | Orgão |
-| Malha | Malha |
-| Ofício | Ofício |
-| Número do Processo | Número do Processo |
-| Área do Responsável | Área do Responsável |
+- Número da Carta *(texto)*
+- E-mail do Responsável *(texto)*
+- Área do Responsável *(texto)*
+- Tema *(texto)*
+- Órgão *(texto)*
+- Malha *(escolha: RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas)*
+- Ofício *(texto)*
+- Forma de Envio *(escolha: SEI, E-mail, Presencialmente)*
+- Número do Processo *(texto)*
+- Assuntos *(escolha: as 14 opções acima)*
 
-Em **Configurações do formulário**, marque **"Somente pessoas da minha
-organização podem responder"** e **"Registrar nome"** — assim o Forms captura
-**quem enviou**, e usaremos isso para o campo **Responsável** (não precisa
-digitar e-mail).
+> Para os campos de **escolha** (Malha, Forma de Envio, Assuntos), o valor que o
+> ARCA envia precisa bater **exatamente** com o texto da opção. O ARCA já envia
+> nesse padrão (ex.: Forma de Envio = `SEI`, Assuntos = `resposta a ofício`).
 
 ## Passo 2 — Gerar o "URL pré-preenchido" com as SENTINELAS
 
@@ -42,20 +65,20 @@ URL). Preencha **cada campo com exatamente estas palavras** (copie e cole):
 
 | Campo | Digite exatamente |
 |---|---|
-| Título | `ZZTITULOZZ` |
+| Número da Carta | `ZZTITULOZZ` |
+| E-mail do Responsável | `ZZEMAILZZ` |
+| Área do Responsável | `ZZAREAZZ` |
 | Tema | `ZZTEMAZZ` |
 | Órgão | `ZZORGAOZZ` |
 | Malha | `ZZMALHAZZ` |
 | Ofício | `ZZOFICIOZZ` |
+| Forma de Envio | `ZZFORMAZZ` |
 | Número do Processo | `ZZPROCESSOZZ` |
-| Área do Responsável | `ZZAREAZZ` |
+| Assuntos | `ZZASSUNTOSZZ` |
 
 Clique em **Obter link** e **copie a URL inteira**. Ela terá as sentinelas
 embutidas (ex.: `...&abc123=ZZTITULOZZ&def456=ZZTEMAZZ...`). O ARCA substitui
 cada sentinela pelo valor real da carta, já com a codificação correta.
-
-> Sentinelas extras disponíveis, se você criar as perguntas: `ZZFORMAZZ`
-> (forma de envio), `ZZASSUNTOSZZ` (assuntos), `ZZRESPONSAVELZZ` (nome).
 
 ## Passo 3 — Configurar no ARCA (Render)
 
@@ -82,18 +105,19 @@ Em **make.powerautomate.com** → **Fluxo de nuvem automatizado**:
 
 | Coluna | Valor |
 |---|---|
-| Título | resposta: Título |
-| Responsável (Claims) | **Responder' Email** (quem enviou o formulário) |
-| Área do Responsável | resposta: Área |
+| Número da Carta | resposta: Número da Carta |
+| E-mail do Responsável | resposta: E-mail do Responsável |
+| Área do Responsável | resposta: Área do Responsável |
 | Tema | resposta: Tema |
 | Orgão | resposta: Órgão |
 | Malha | resposta: Malha *(se for escolha múltipla, divida por vírgula)* |
 | Ofício | resposta: Ofício |
-| Forma de Envio | `SEI` |
+| Forma de Envio | resposta: Forma de Envio |
 | Número do Processo | resposta: Número do Processo |
+| Assuntos | resposta: Assuntos |
 
-Deixe em branco (preenchidos após protocolar no SEI): **Conferida?, Data de
-Envio, Dilação?, Prazo com Dilação, Protocolo**.
+Deixe em branco (preenchidos após protocolar no SEI): **Data de Envio, Dilação?,
+Prazo com Dilação, Protocolo**. (E, se existir, "Conferida?".)
 
 ---
 
