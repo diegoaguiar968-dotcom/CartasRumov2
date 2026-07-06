@@ -6,7 +6,7 @@
 const MALHAS = {
   rumo: {
     nome:  'RUMO S.A.',
-    sigla: 'RUMO',
+    sigla: 'RSA',
     cnpj:  '02.387.241/0001-60',
   },
   norte: {

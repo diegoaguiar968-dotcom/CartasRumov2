@@ -174,19 +174,20 @@ async function detalheHistorico(req, res, next) {
 }
 
 /**
- * PATCH /api/historico/:id — edita campos de atribuição (responsável/área).
+ * PATCH /api/historico/:id — edita campos de atribuição (responsável/área/assuntos).
  */
 async function atualizarHistorico(req, res, next) {
   try {
     if (!isEnabled()) return res.status(503).json({ success: false, message: 'Banco de dados não configurado.' });
-    const { responsavel, area } = req.body || {};
+    const { responsavel, area, assuntos } = req.body || {};
     const { rows } = await query(
       `UPDATE historico
          SET responsavel = COALESCE($1, responsavel),
-             area        = COALESCE($2, area)
-       WHERE id = $3
-       RETURNING id, responsavel, area`,
-      [responsavel ?? null, area ?? null, req.params.id]
+             area        = COALESCE($2, area),
+             assuntos    = COALESCE($3, assuntos)
+       WHERE id = $4
+       RETURNING id, responsavel, area, assuntos`,
+      [responsavel ?? null, area ?? null, assuntos ?? null, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Entrada não encontrada.' });
     res.json({ success: true, entrada: rows[0] });

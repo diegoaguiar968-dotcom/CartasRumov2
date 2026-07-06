@@ -240,6 +240,17 @@ export async function excluirHistoricoEntrada(id: string): Promise<{ success: bo
   return res.json();
 }
 
+export async function atualizarHistoricoEntrada(
+  id: string,
+  dados: { responsavel?: string; area?: string; assuntos?: string }
+): Promise<{ success: boolean }> {
+  const res = await req(`/api/historico/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(dados),
+  });
+  return res.json();
+}
+
 // Baixa o .docx de uma entrada do histórico via fetch+blob, para carregar os
 // headers (X-Session-ID / X-App-Key) — navegação direta não os enviaria.
 export async function baixarHistoricoDocx(id: string): Promise<string> {

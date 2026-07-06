@@ -41,6 +41,7 @@ import {
   getHistoricoOpcoes,
   getHistoricoDetalhe,
   excluirHistoricoEntrada,
+  atualizarHistoricoEntrada,
   baixarHistoricoDocx,
   registrarSharePoint,
   getSharepointMode,
@@ -92,7 +93,7 @@ const MALHA_OPTIONS = [
   { key: "oeste", nome: "Rumo Malha Oeste S.A.", sigla: "RMO" },
   { key: "sul", nome: "Rumo Malha Sul S.A.", sigla: "RMS" },
   { key: "central", nome: "Rumo Malha Central S.A.", sigla: "RMC" },
-  { key: "rumo", nome: "RUMO S.A. (Holding)", sigla: "RUMO" },
+  { key: "rumo", nome: "RUMO S.A. (Holding)", sigla: "RSA" },
 ];
 
 type FlowType = "resposta" | "espontanea" | null;
@@ -112,6 +113,24 @@ const STEPS_ESPONTANEA = [
   { number: 4, key: "minuta", label: "Minuta gerada" },
   { number: 5, key: "ajuda", label: "Como usar" },
   { number: 6, key: "historico", label: "Histórico" },
+];
+
+// Opções da coluna "Assuntos" no SharePoint (devem casar exatamente com a lista)
+const ASSUNTOS_OPCOES = [
+  "patrimônio",
+  "ativos",
+  "passivos",
+  "interferências",
+  "DUP",
+  "investimentos obrigatórios",
+  "obrigações contratuais",
+  "indicadores",
+  "acidentes",
+  "solicitação de acesso",
+  "fiscalização",
+  "RDT e RPMF",
+  "resposta a ofício",
+  "outro",
 ];
 
 // Campos do painel de detalhes — mesma ordem e rótulos da lista do SharePoint
@@ -575,6 +594,21 @@ export default function App() {
     }
   }
 
+  async function atualizarAssuntos(novo: string) {
+    if (!histDetalhe) return;
+    const anterior = histDetalhe.assuntos;
+    setHistDetalhe((d) => (d ? { ...d, assuntos: novo } : d));
+    try {
+      await atualizarHistoricoEntrada(histDetalhe.id, { assuntos: novo });
+      setHistEntradas((lista) =>
+        lista.map((e) => (e.id === histDetalhe.id ? { ...e, assuntos: novo } : e))
+      );
+    } catch (e: any) {
+      setHistDetalhe((d) => (d ? { ...d, assuntos: anterior } : d));
+      notificarErro(e.message || "Erro ao atualizar o assunto.");
+    }
+  }
+
   async function excluirDoHistorico(id: string) {
     const ok = await confirmar({
       titulo: "Excluir do histórico?",
@@ -673,9 +707,13 @@ export default function App() {
 
   const nomeArquivoPreview = () => {
     const ano = new Date().getFullYear();
-    const siglas = MALHA_OPTIONS.filter((m) => malhasSelecionadas.has(m.key))
-      .map((m) => m.sigla)
-      .join(", ");
+    const OPERANTES = ["norte", "paulista", "oeste", "sul", "central"];
+    const todasOperantes = OPERANTES.every((k) => malhasSelecionadas.has(k));
+    const siglas = todasOperantes
+      ? "Todas as malhas"
+      : MALHA_OPTIONS.filter((m) => malhasSelecionadas.has(m.key))
+          .map((m) => m.sigla)
+          .join(", ");
     const assuntoBase = minutaMeta?.assunto || assunto || "Assunto";
     // O assunto da IA costuma já terminar com a sigla da entidade — não duplica
     const jaTemSigla = !!siglas && assuntoBase.trim().toUpperCase().endsWith(siglas.toUpperCase());
@@ -1416,6 +1454,37 @@ export default function App() {
                   {CAMPOS_SHAREPOINT.map((c) => {
                     const val = c.chave ? String(histDetalhe[c.chave] ?? "") : "";
                     const vazio = !val;
+                    // "Assuntos" é editável (seletor com as opções da lista)
+                    if (c.chave === "assuntos") {
+                      return (
+                        <div
+                          key={c.rot}
+                          className="flex items-center gap-2 py-1.5"
+                          style={{ borderBottom: "1px solid hsl(var(--border) / 0.35)", fontSize: "13px" }}
+                        >
+                          <span style={{ width: "160px", flexShrink: 0, color: "hsl(var(--text-muted))", fontSize: "12px", fontWeight: 600 }}>
+                            {c.rot}
+                          </span>
+                          <select
+                            value={ASSUNTOS_OPCOES.includes(val) ? val : ""}
+                            onChange={(e) => atualizarAssuntos(e.target.value)}
+                            className="flex-1 px-2 py-1 rounded text-sm"
+                            style={{
+                              background: "hsl(var(--surface-app))",
+                              border: "1px solid hsl(var(--border))",
+                              color: "hsl(var(--text-primary))",
+                            }}
+                          >
+                            {!ASSUNTOS_OPCOES.includes(val) && <option value="">{val || "(selecionar)"}</option>}
+                            {ASSUNTOS_OPCOES.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={c.rot}

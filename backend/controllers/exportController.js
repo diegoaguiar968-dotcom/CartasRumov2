@@ -48,9 +48,16 @@ function sanitizeNome(s) {
     .substring(0, 80);
 }
 
+// Malhas operantes (as 5 concessionárias, fora o holding RSA)
+const MALHAS_OPERANTES = ['norte', 'paulista', 'oeste', 'sul', 'central'];
+
 function siglaMalhaDe(malhaKey) {
   const malhas = resolverMalhas(malhaKey);
-  return malhas.length > 0 ? malhas.map(m => m.sigla).join(', ') : '';
+  if (malhas.length === 0) return '';
+  const keys = String(malhaKey || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  // Se todas as 5 malhas operantes estiverem selecionadas → "Todas as malhas"
+  if (MALHAS_OPERANTES.every(k => keys.includes(k))) return 'Todas as malhas';
+  return malhas.map(m => m.sigla).join(', ');
 }
 
 // Gera nome do arquivo: $numero$ - GREG - $ano$ - $assunto$ - $malha$
