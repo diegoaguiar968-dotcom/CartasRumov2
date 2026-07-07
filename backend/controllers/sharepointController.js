@@ -10,14 +10,23 @@
 const { isEnabled, query } = require('../services/db');
 const { gerarDocxDeEntrada } = require('./exportController');
 
+// Template padrão do formulário de registro (Microsoft Forms, lista Cartas GREG).
+// Pode ser sobrescrito pela env SHAREPOINT_FORMS_URL_TEMPLATE se o form mudar.
+const DEFAULT_FORMS_TEMPLATE =
+  'https://forms.office.com/Pages/ResponsePage.aspx?id=wul8g_owE0a57h8RTOcf8Tiu47VrLU5DjDJCXmVg6IVUQ0REVjdQMDlZU0VESUFIUjNRQzZWVzZFMi4u&r57880ed80f2344e6af0f06fbd0b6bb0b=ZZTITULOZZ&re69b8f2ac85e4dd78e4ef0209ad46f26=ZZEMAILZZ&r045a31c4078749c1bb7659569700e762=ZZAREAZZ&rcdf277bda4de42a9881225fe294777f8=ZZTEMAZZ&rcc48cb6f4c664727b3413952e8a41de7=ZZORGAOZZ&r0f6f9b5e5aeb4566ae97bb30cee1574a=ZZOFICIOZZ&r4c7c32818dfe485fb2296e8d5b8e256d=ZZMALHAZZ&r718a1fc8184f468089599a25c595492f=ZZFORMAZZ&re2a4d209bbb04177bc2bd871da947884=ZZPROCESSOZZ&r081891072b7a4311aa596f4939a4b95a=ZZASSUNTOSZZ';
+
+function formsTemplate() {
+  return process.env.SHAREPOINT_FORMS_URL_TEMPLATE || DEFAULT_FORMS_TEMPLATE || '';
+}
+
 /**
- * Modo de integração ativo, conforme as variáveis de ambiente:
+ * Modo de integração ativo:
  *  - 'forms'   → link de Microsoft Forms pré-preenchido (sem premium)
  *  - 'webhook' → POST para o Power Automate / Make (SHAREPOINT_WEBHOOK_URL)
- *  - 'none'    → não configurado (botão desabilitado no frontend)
+ *  - 'none'    → não configurado (botão oculto no frontend)
  */
 function sharepointMode() {
-  if (process.env.SHAREPOINT_FORMS_URL_TEMPLATE) return 'forms';
+  if (formsTemplate()) return 'forms';
   if (process.env.SHAREPOINT_WEBHOOK_URL) return 'webhook';
   return 'none';
 }
@@ -28,7 +37,7 @@ function sharepointMode() {
  * devolve o link do Forms já pré-preenchido para o usuário revisar e enviar.
  */
 async function formsUrl(req, res, next) {
-  const template = process.env.SHAREPOINT_FORMS_URL_TEMPLATE;
+  const template = formsTemplate();
   if (!template) {
     return res.status(503).json({ success: false, message: 'Integração via formulário não configurada.' });
   }
