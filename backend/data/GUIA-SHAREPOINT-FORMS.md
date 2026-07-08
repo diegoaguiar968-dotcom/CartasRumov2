@@ -26,7 +26,7 @@ não vai junto** pelo formulário (anexe manualmente se precisar).
 | Data de envio | ⬜ | preencher após protocolar no SEI |
 | Tema | ✅ | `ZZTEMAZZ` |
 | Órgão | ✅ | `ZZORGAOZZ` (ANTT) |
-| Malha | ✅ | `ZZMALHAZZ` — opções: RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas |
+| Malha | ✅ | `ZZMALHAZZ` — coluna de **escolha múltipla**. O ARCA envia uma ou mais siglas separadas por vírgula (ex.: `RMN, RMP`). Ver "Malha (escolha múltipla)" no Passo 4 |
 | Ofício | ✅ | `ZZOFICIOZZ` |
 | Dilação? | ⬜ | Sim/Não — após |
 | Prazo com Dilação | ⬜ | após |
@@ -48,15 +48,23 @@ na lista após protocolar):
 - Área do Responsável *(texto)*
 - Tema *(texto)*
 - Órgão *(texto)*
-- Malha *(escolha: RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas)*
+- Malha *(**texto** — não use "escolha" aqui; veja a nota abaixo)*
 - Ofício *(texto)*
 - Forma de Envio *(escolha: SEI, E-mail, Presencialmente)*
 - Número do Processo *(texto)*
 - Assuntos *(escolha: as 14 opções acima)*
 
-> Para os campos de **escolha** (Malha, Forma de Envio, Assuntos), o valor que o
-> ARCA envia precisa bater **exatamente** com o texto da opção. O ARCA já envia
-> nesse padrão (ex.: Forma de Envio = `SEI`, Assuntos = `resposta a ofício`).
+> Para os campos de **escolha** (Forma de Envio, Assuntos), o valor que o ARCA
+> envia precisa bater **exatamente** com o texto da opção. O ARCA já envia nesse
+> padrão (ex.: Forma de Envio = `SEI`, Assuntos = `resposta a ofício`).
+>
+> **Malha é diferente:** no SharePoint a coluna Malha é de **escolha múltipla**,
+> e uma carta pode ter várias malhas (ex.: `RMN, RMP`). Uma pergunta de "escolha"
+> no Forms só aceitaria **um** valor, então a pergunta Malha do formulário deve
+> ser de **texto**. O ARCA envia as siglas separadas por vírgula e o fluxo
+> (Passo 4) divide esse texto e preenche a coluna múltipla. As siglas que o ARCA
+> envia — `RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas` — batem exatamente com
+> as opções da coluna no SharePoint.
 
 ## Passo 2 — Gerar o "URL pré-preenchido" com as SENTINELAS
 
@@ -110,7 +118,7 @@ Em **make.powerautomate.com** → **Fluxo de nuvem automatizado**:
 | Área do Responsável | resposta: Área do Responsável |
 | Tema | resposta: Tema |
 | Orgão | resposta: Órgão |
-| Malha | resposta: Malha *(se for escolha múltipla, divida por vírgula)* |
+| Malha | **ver "Malha (escolha múltipla)" abaixo** |
 | Ofício | resposta: Ofício |
 | Forma de Envio | resposta: Forma de Envio |
 | Número do Processo | resposta: Número do Processo |
@@ -118,6 +126,36 @@ Em **make.powerautomate.com** → **Fluxo de nuvem automatizado**:
 
 Deixe em branco (preenchidos após protocolar no SEI): **Data de Envio, Dilação?,
 Prazo com Dilação, Protocolo**. (E, se existir, "Conferida?".)
+
+### Malha (escolha múltipla) — como preencher a coluna
+
+Como a coluna Malha aceita **vários valores** e o ARCA manda um texto tipo
+`RMN, RMP`, você precisa transformar esse texto em uma **lista** antes de gravar.
+No Power Automate isso é feito com a função `split`:
+
+1. Na ação **Criar item**, localize o campo **Malha**.
+2. Clique no ícone **⇆ (Alternar para inserir toda a matriz / Switch to input
+   entire array)** que aparece no canto direito do campo Malha.
+3. No campo que abrir, cole esta expressão (aba **Expressão / fx**):
+
+   ```
+   split(outputs('Obter_os_detalhes_da_resposta')?['body/<id-da-pergunta-Malha>'], ', ')
+   ```
+
+   - Troque `Obter_os_detalhes_da_resposta` pelo nome exato da sua ação de
+     "Obter os detalhes da resposta" (se você renomeou, use o novo nome).
+   - Troque `<id-da-pergunta-Malha>` pelo identificador da pergunta Malha. Dica:
+     em vez de digitar o id à mão, apague o conteúdo, use **Conteúdo dinâmico**
+     para inserir a resposta **Malha** dentro de um `split(  , ', ')` — o editor
+     preenche o caminho certo. O resultado fica parecido com o exemplo acima.
+
+O separador é **`, `** (vírgula + espaço) — é exatamente assim que o ARCA junta
+as siglas. Assim `RMN, RMP` vira `["RMN","RMP"]` e as duas malhas ficam marcadas
+na coluna. Uma malha só (`RMS`) vira `["RMS"]`, sem problema.
+
+> Se preferir não mexer com `split`: dá para usar a ação **"Selecionar" (Select)**
+> antes do Criar item, mapeando cada item de `split(...)` — mas a expressão acima
+> no próprio campo é o caminho mais curto.
 
 ---
 
