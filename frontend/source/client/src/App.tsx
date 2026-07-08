@@ -470,11 +470,18 @@ export default function App() {
         /* verificação indisponível — segue o download normalmente */
       }
       const { responsavel, area, email } = getResponsavel();
+      // Ofício e Assuntos para o registro: só há ofício no fluxo de resposta.
+      // Na espontânea, ambos vão em branco (o usuário escolhe o Assuntos no histórico).
+      const isResposta = flowType === "resposta";
+      const oficioSp = isResposta ? minutaMeta?.referencia || "" : "";
+      const assuntosSp = isResposta ? "resposta a ofício" : "";
       const nome = await downloadDocx(numeroCarta, minutaTexto, {
         ...minutaMeta,
         responsavel,
         responsavelEmail: email,
         area,
+        oficio: oficioSp,
+        assuntos: assuntosSp,
       });
       toast({ description: `Carta baixada: ${nome}` });
     } catch (e: any) {
@@ -677,8 +684,13 @@ export default function App() {
 
   // Reabre uma carta do histórico na etapa de minuta para edição/refinamento
   function reabrirDoHistorico(e: HistoricoEntrada) {
+    const todas = e.malha === "Todas as malhas";
     const siglas = (e.malha || "").split(",").map((s) => s.trim()).filter(Boolean);
-    const keys = MALHA_OPTIONS.filter((m) => siglas.includes(m.sigla)).map((m) => m.key);
+    const keys = todas
+      ? ["norte", "paulista", "oeste", "sul", "central"]
+      : MALHA_OPTIONS.filter((m) => siglas.includes(m.sigla)).map((m) => m.key);
+    // Heurística p/ re-download consistente: com ofício → fluxo resposta
+    setFlowType(e.oficio ? "resposta" : "espontanea");
     setMinutaTexto(e.minuta || "");
     setMinutaMeta({
       signatarioAntt: e.signatario_antt || "",

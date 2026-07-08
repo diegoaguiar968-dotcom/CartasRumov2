@@ -24,7 +24,7 @@ async function salvarHistorico(dados) {
         dados.responsavel || '',
         dados.responsavelEmail || '',
         dados.area || '',
-        dados.assuntos || 'Resposta Ofício',
+        dados.assuntos ?? 'resposta a ofício',
         dados.tema || '',
         dados.orgao || 'ANTT',
         dados.malha || '',

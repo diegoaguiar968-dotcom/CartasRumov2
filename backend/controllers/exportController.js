@@ -227,6 +227,11 @@ async function exportarDocx(req, res, next) {
     const responsavel      = meta.responsavel      ?? '';
     const responsavelEmail = meta.responsavelEmail ?? '';
     const area             = meta.area             ?? '';
+    // Ofício e Assuntos para o histórico/SharePoint vêm explícitos do frontend:
+    // resposta → nº do ofício + "resposta a ofício"; espontânea → em branco.
+    // Fallback (clientes antigos): comportamento anterior.
+    const oficioSp   = meta.oficio   !== undefined ? meta.oficio   : (referencia || numeroOficio);
+    const assuntosSp = meta.assuntos !== undefined ? meta.assuntos : undefined;
 
     if (!conteudo) {
       return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
@@ -247,7 +252,8 @@ async function exportarDocx(req, res, next) {
       tema: assunto,
       orgao: meta.orgao || 'ANTT',
       malha: siglaMalhaDe(malhaKey),
-      oficio: referencia || numeroOficio,
+      oficio: oficioSp,
+      assuntos: assuntosSp,
       processo,
       modeloId,
       minuta: conteudo,

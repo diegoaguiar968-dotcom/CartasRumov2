@@ -314,7 +314,14 @@ export async function numeroJaExiste(numero: string): Promise<boolean> {
 export async function downloadDocx(
   numeroOficio: string,
   conteudo: string,
-  meta: Partial<MinutaMeta> & { responsavel?: string; responsavelEmail?: string; area?: string; orgao?: string }
+  meta: Partial<MinutaMeta> & {
+    responsavel?: string;
+    responsavelEmail?: string;
+    area?: string;
+    orgao?: string;
+    oficio?: string;
+    assuntos?: string;
+  }
 ): Promise<string> {
   const res = await req("/api/export/docx", {
     method: "POST",
