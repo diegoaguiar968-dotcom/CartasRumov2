@@ -344,6 +344,37 @@ Se você quiser que o ARCA mostre o link do item criado, adicione ao final
 
 ---
 
+## Alternar entre Forms e Webhook com um clique (`SHAREPOINT_MODE`)
+
+O ARCA decide o modo nesta ordem:
+
+1. **`SHAREPOINT_MODE`** (se definida) manda em tudo → `forms`, `webhook` ou `none`.
+2. senão, se houver `SHAREPOINT_WEBHOOK_URL` → `webhook`.
+3. senão, se houver template de Forms → `forms`.
+4. senão → `none` (botão oculto).
+
+**Configuração recomendada para trocar fácil no futuro:** deixe **as duas
+integrações configuradas ao mesmo tempo** no Render e use só o `SHAREPOINT_MODE`
+como chave:
+
+| Variável | Valor | Manter sempre |
+|---|---|---|
+| `SHAREPOINT_WEBHOOK_URL` | URL do fluxo (webhook) | ✅ |
+| `SHAREPOINT_WEBHOOK_SECRET` | o segredo | ✅ |
+| `SHAREPOINT_FORMS_URL_TEMPLATE` | URL do Forms pré-preenchido | ✅ (opcional) |
+| **`SHAREPOINT_MODE`** | **`forms`** ou **`webhook`** | ← só troca este |
+
+Assim, para mudar de modo é só editar `SHAREPOINT_MODE` e salvar (o Render
+reinicia e o botão do histórico se ajusta sozinho). Ex.: hoje em `forms`; quando
+liberarem o Entra ID / OAuth para o gatilho HTTP, troque para `webhook`.
+
+> ⚠️ Atenção: se `SHAREPOINT_MODE=forms` estiver definida, o ARCA **fica no
+> Forms mesmo com a `SHAREPOINT_WEBHOOK_URL` presente** — foi isso que segurou o
+> botão em "Registrar via formulário" durante os testes. Para voltar ao webhook,
+> troque para `SHAREPOINT_MODE=webhook` (ou apague a variável).
+
+---
+
 ## 10. Testar
 
 1. No histórico do ARCA, abra uma carta e clique em **"Registrar no SharePoint"**.
