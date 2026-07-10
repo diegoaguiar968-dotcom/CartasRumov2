@@ -5,6 +5,20 @@ const K_NOME = "arca-responsavel";
 const K_AREA = "arca-area";
 const K_EMAIL = "arca-email";
 
+// Opções exatas da coluna "Área do Responsável" (choice) no SharePoint.
+// O valor selecionado precisa bater exatamente com a opção da lista.
+export const AREA_OPCOES = [
+  "Gerência Executiva",
+  "Projetos - Regulatório",
+  "Ativos - Regulatório",
+  "Concessão - Regulatório",
+  "FMT",
+  "Regulação econômica",
+  "Fiscalização - Regulatório",
+  "RSA",
+  "RMS",
+];
+
 function get(k: string) {
   try {
     return localStorage.getItem(k) || "";
@@ -82,13 +96,19 @@ export default function IdentifyWidget() {
             className="w-full mb-1.5 px-2 py-1.5 rounded text-sm"
             style={inputStyle}
           />
-          <input
+          <select
             value={area}
             onChange={(e) => setArea(e.target.value)}
-            placeholder="Sua área (opcional)"
             className="w-full px-2 py-1.5 rounded text-sm"
             style={inputStyle}
-          />
+          >
+            <option value="">Selecione sua área…</option>
+            {AREA_OPCOES.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
           <p className="text-[11px] mt-1.5" style={{ color: "hsl(var(--text-muted))", lineHeight: 1.4 }}>
             O e-mail preenche o campo "Responsável" ao registrar no SharePoint.
           </p>
