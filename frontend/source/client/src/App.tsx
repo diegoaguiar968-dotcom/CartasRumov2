@@ -655,9 +655,12 @@ export default function App() {
         notificarErro(r.message || "Não foi possível registrar no SharePoint.");
         return;
       }
-      toast({
-        description: r.itemUrl ? "Carta registrada no SharePoint." : "Carta enviada ao SharePoint.",
-      });
+      if (r.itemUrl) {
+        window.open(r.itemUrl, "_blank", "noopener");
+        toast({ description: "Carta registrada — abrindo o item no SharePoint." });
+      } else {
+        toast({ description: "Carta enviada ao SharePoint." });
+      }
       const quando = r.registradoEm || new Date().toISOString();
       setHistDetalhe((d) => (d ? { ...d, sharepoint_em: quando } : d));
       carregarHistorico();

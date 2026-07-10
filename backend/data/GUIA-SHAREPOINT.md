@@ -307,26 +307,54 @@ opções da coluna.
 
 ## 7. Etapa E — Anexar o `.docx` (opcional)
 
-Se quiser o arquivo dentro do item, depois do "Criar item" adicione
-**SharePoint → "Adicionar anexo"**:
+O ARCA já manda o arquivo no payload, em **dois campos**: `docxBase64` (o
+conteúdo do .docx codificado) e `docxNome` (o nome do arquivo). Falta o fluxo
+transformar isso em anexo:
 
-- **Id** = ID do item criado (conteúdo dinâmico do "Criar item").
-- **Nome do arquivo** = `docxNome`.
-- **Conteúdo do arquivo** = na aba Expressão, cole:
-  `base64ToBinary(triggerBody()?['docxBase64'])`.
+1. **Depois** da ação "Criar item", clique em **+ Nova etapa** → **SharePoint** →
+   **"Adicionar anexo"**.
+2. Preencha:
+   - **Endereço do site** e **Nome da lista**: os mesmos do "Criar item".
+   - **Id**: o **ID** do item criado (Conteúdo dinâmico → "ID", saída do
+     "Criar item").
+   - **Nome do arquivo**: o campo `docxNome` (Conteúdo dinâmico do gatilho).
+   - **Conteúdo do arquivo**: aba **Expressão (fx)**, cole:
+     ```
+     base64ToBinary(triggerBody()?['docxBase64'])
+     ```
+     (o `base64ToBinary` reconverte o texto de volta para o arquivo binário).
+
+> Se em alguma carta o `.docx` não vier (raro), o `docxBase64` chega vazio e o
+> anexo falha. Para não derrubar o fluxo, você pode envolver esta ação num
+> **Condição** "docxBase64 não é vazio" — opcional.
 
 ---
 
-## 8. Etapa F — Devolver o link do item (opcional)
+## 8. Etapa F — Devolver o link do item (para o ARCA abrir na hora)
 
-Se você quiser que o ARCA mostre o link do item criado, adicione ao final
-**Resposta** (*Response*): **Status 200**, corpo:
+Com isso, ao registrar, o **ARCA abre o item recém-criado numa nova aba**
+automaticamente (o backend já lê o campo `itemUrl` da resposta do fluxo).
 
-```json
-{ "itemUrl": "<link do item>" }
-```
+1. **Ao final** do fluxo (depois do "Criar item" / "Adicionar anexo"), clique em
+   **+ Nova etapa** → procure **"Resposta"** (*Response*, do grupo "Solicitação").
+2. Configure:
+   - **Código de status**: `200`.
+   - **Corpo** (*Body*): cole o JSON abaixo, substituindo o valor pelo
+     **conteúdo dinâmico "Link para o item"** (saída do "Criar item"):
+     ```json
+     { "itemUrl": "<Link para o item>" }
+     ```
+     Na prática: digite `{ "itemUrl": "` → insira o dinâmico **"Link para o
+     item"** → feche com `" }`.
+3. **Salve** o fluxo.
 
-(coloque o link do item usando o conteúdo dinâmico "Link para o item").
+> ⚠️ **A ação "Resposta" exige que o fluxo seja síncrono.** Como o ARCA fica
+> aguardando a resposta, tudo bem — mas certifique-se de que a "Resposta" é a
+> **última** ação e que o gatilho não tem timeout curto. Se o SharePoint demorar,
+> o ARCA só deixa de mostrar o link (não quebra o registro).
+
+> Sem esta etapa, o registro **funciona igual** — o ARCA apenas mostra "Carta
+> enviada ao SharePoint" sem abrir o link.
 
 ---
 
