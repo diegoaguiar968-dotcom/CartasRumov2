@@ -133,27 +133,39 @@ que o guia pedia é **adicionar uma AÇÃO** chamada *"Obter perfil do usuário
 (V2)"*, do conector **"Usuários do Office 365"**. Ela serve para transformar um
 **e-mail** em um **usuário de verdade**.
 
-**Por que isso é necessário?** Depende do tipo da coluna **Responsável** na sua
-lista:
+**Existem dois jeitos.** Para a coluna Responsável do tipo **Pessoa**, o mais
+simples é o **Jeito 1**:
 
-- **Se "Responsável" é uma coluna do tipo _Pessoa_** (Pessoa ou Grupo): ela não
-  aceita texto — precisa de uma identidade de usuário real. Aí você **precisa**
-  desta etapa.
-- **Se "Responsável" é só _texto_** (ou se você usa a coluna "E-mail do
-  Responsável" como texto): **pule esta etapa** e, no Criar item (Etapa D),
-  mapeie o e-mail/nome direto, como texto.
+### Jeito 1 (recomendado) — sem ação extra, e-mail direto no Claims
 
-> Como saber o tipo? Nas **configurações da lista** no SharePoint, veja o tipo da
-> coluna Responsável. Ou, na ação **Criar item** (Etapa D), se a coluna aparecer
-> pedindo **"Claims"**, é do tipo Pessoa.
+O SharePoint geralmente resolve o usuário **direto pelo e-mail**. Então você
+**não precisa** da ação "Obter perfil do usuário (V2)":
 
-**Como adicionar a ação (caso a coluna seja Pessoa):**
+1. **Não** adicione (ou exclua) a ação "Obter perfil do usuário (V2)".
+2. Vá direto ao **"Criar item"** (Etapa D) e, no campo **Responsável → Claims**,
+   coloque o e-mail com a expressão `triggerBody()?['responsavelEmail']`.
 
-1. Dentro do ramo **"Se sim"**, clique em **+ Nova etapa**.
+Vantagem: evita a conexão do Office 365 (veja o aviso abaixo). Limitação: se o
+e-mail não existir no diretório, a coluna fica vazia (não dá erro).
+
+### Jeito 2 — com a ação "Obter perfil do usuário (V2)" (e-mail validado)
+
+Use se quiser **validar** o usuário no diretório antes de gravar:
+
+1. Dentro do ramo **"Verdadeiro"**, clique em **+ Nova etapa**.
 2. Na busca, digite **"Office 365 Users"** (ou "Usuários do Office 365").
 3. Escolha a ação **"Obter perfil do usuário (V2)"**.
 4. No campo **"Usuário (UPN)"**, informe o e-mail do responsável. Tente pelo
    **Conteúdo dinâmico** → `responsavelEmail`.
+
+> 🔌 **A ação aparece com "Parâmetros inválidos" e nenhum campo?** Isso é
+> **conexão**, não o campo. Se o conector **"Usuários do Office 365"** estiver
+> com um **✗ vermelho** (conexão inválida), a ação não carrega os parâmetros —
+> por isso o campo "Usuário (UPN)" nem aparece. **Solução:** no painel
+> **"Alterar conexão"**, clique em **"Adicionar novo(a)"** e faça **login com sua
+> conta corporativa Microsoft**. Quando a conexão ficar válida, a ação recarrega
+> e o campo "Usuário (UPN)" aparece. (Se preferir não lidar com isso, use o
+> **Jeito 1**.)
 
 > ⚠️ **`responsavelEmail` não aparece no Conteúdo dinâmico?** Isso acontece
 > quando o **Esquema JSON do gatilho** (Etapa A) não foi reconhecido — sem ele,
@@ -208,21 +220,26 @@ Data de Envio, Dilação?, Prazo com Dilação, Protocolo.**
 ### Coluna Responsável (Pessoa) — como preencher o "Claims"
 
 Como a coluna é do tipo **Pessoa**, o campo Responsável no "Criar item" aparece
-com um subcampo **"Claims"** (ele identifica o usuário). Preencha assim:
+com um subcampo **"Claims"** (ele identifica o usuário). Preencha conforme o jeito
+que você escolheu na Etapa C:
 
-- No subcampo **Claims**, use o **e-mail** do usuário obtido na Etapa C. Pelo
-  Conteúdo dinâmico, escolha o campo **"Email"** (ou "Nome UPN") da ação
-  **"Obter perfil do usuário (V2)"**.
-- Se preferir a expressão garantida, cole no Claims:
+- **Jeito 1 (recomendado):** no subcampo **Claims**, aba **Expressão (fx)**, cole
+  o e-mail direto:
+  ```
+  triggerBody()?['responsavelEmail']
+  ```
+  O SharePoint resolve o usuário pelo e-mail. Sem ação extra, sem conexão do
+  Office 365.
+- **Jeito 2 (e-mail validado):** se você usou a ação "Obter perfil do usuário
+  (V2)", no **Claims** use o **"Email"** dela (Conteúdo dinâmico) ou a expressão:
   ```
   outputs('Obter_o_perfil_do_usuário_(V2)')?['body/mail']
   ```
   (troque o nome entre aspas pelo nome exato da sua ação, se você a renomeou).
 
-> Por que não colocar o e-mail cru direto? Porque a coluna Pessoa valida o
-> usuário no diretório. O `mail` vindo do "Obter perfil do usuário (V2)" já é um
-> valor validado, então o SharePoint reconhece a pessoa. Se o e-mail não existir
-> no diretório, o "Criar item" falha nessa coluna — por isso a Etapa C existe.
+> Se o e-mail não existir no diretório: no Jeito 1 a coluna fica **vazia**; no
+> Jeito 2 o fluxo **falha** nessa etapa. Para e-mails @rumo válidos, os dois
+> funcionam — o Jeito 1 é o mais simples.
 
 ### Malha — coluna de escolha múltipla
 
