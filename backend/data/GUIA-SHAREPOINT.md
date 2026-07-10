@@ -403,7 +403,7 @@ liberarem o Entra ID / OAuth para o gatilho HTTP, troque para `webhook`.
   "oficio": "OFÍCIO SEI Nº 41045/2025",
   "processo": "50505.064442/2025-38",
   "formaEnvio": "SEI",
-  "assuntos": "resposta a ofício",
+  "assuntos": "Resposta a Ofício",
   "responsavel": "Diego Bruno de Pinho",
   "responsavelEmail": "diego.pinho@rumo.com.br",
   "area": "Projetos - Regulatório",

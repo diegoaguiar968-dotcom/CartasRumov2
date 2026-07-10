@@ -113,7 +113,7 @@ Use estes tipos de pergunta:
 | Ofício | Texto |
 | Forma de Envio | Escolha → opções: `SEI`, `E-mail`, `Presencialmente` |
 | Número do Processo | Texto |
-| Assuntos | Escolha → as 14 opções (patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, resposta a ofício, outro) |
+| Assuntos | Escolha → as 14 opções (patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, Resposta a Ofício, outro) |
 
 > ⚠️ **Por que a Malha é "Texto" e não "Escolha"?**
 > No SharePoint, a coluna Malha aceita **várias malhas ao mesmo tempo** (uma carta
@@ -125,7 +125,8 @@ Use estes tipos de pergunta:
 
 > 💡 **Dica sobre "Escolha":** nos campos Forma de Envio e Assuntos, o texto das
 > opções precisa ser **idêntico** ao que o ARCA envia (mesmas palavras, mesmos
-> acentos, minúsculas). Ex.: escreva `resposta a ofício`, não `Resposta Ofício`.
+> acentos, maiúsculas). Ex.: a opção de resposta deve ser exatamente
+> `Resposta a Ofício` (com iniciais maiúsculas), como está na coluna do SharePoint.
 
 ---
 
