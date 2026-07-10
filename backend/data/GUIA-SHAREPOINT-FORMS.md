@@ -245,8 +245,9 @@ lista depois. (Coluna do tipo Data e Hora? Use `utcNow()` ou
 ### Malha — o passo especial (coluna de escolha múltipla)
 
 A coluna Malha aceita **vários valores**, mas o formulário manda um **texto**
-(`RMN, RMP`). É preciso transformar esse texto em uma **lista** antes de gravar.
-Isso se faz com a função `split`:
+(`RMN, RMP`). A coluna exige uma lista de **objetos** no formato
+`[{"Value":"RMN"},{"Value":"RMP"}]` — um `split` simples (lista de textos) é
+**recusado com BadRequest**.
 
 1. Na ação **Criar item**, encontre o campo **Malha**.
 2. No canto direito do campo, clique no ícone **⇆ "Alternar para inserir toda a
@@ -254,19 +255,18 @@ Isso se faz com a função `split`:
 3. Clique nessa caixa → aba **Expressão (fx)** → cole:
 
    ```
-   split(outputs('Obter_os_detalhes_da_resposta')?['body/IDDAPERGUNTAMALHA'], ', ')
+   if(empty(outputs('Obter_os_detalhes_da_resposta')?['body/IDDAPERGUNTAMALHA']), json('[]'), json(concat('[{"Value":"', replace(outputs('Obter_os_detalhes_da_resposta')?['body/IDDAPERGUNTAMALHA'], ', ', '"},{"Value":"'), '"}]')))
    ```
 
-   - Troque `IDDAPERGUNTAMALHA` pelo identificador real da pergunta Malha.
-   - **Jeito fácil (sem decorar o id):** apague tudo, digite `split(` na aba
-     Expressão, depois vá em **Conteúdo dinâmico** e clique na resposta
-     **"Malha"** (o editor insere o caminho certo sozinho), e complete com
-     `, ', ')` no final. Vai ficar parecido com o exemplo acima.
+   - Troque `IDDAPERGUNTAMALHA` (aparece 2×) pelo identificador real da pergunta
+     Malha. Dica: insira a resposta **"Malha"** pelo **Conteúdo dinâmico** dentro
+     da expressão, que o editor preenche o caminho certo.
 
-**O que essa expressão faz:** `split` corta o texto sempre que encontra `, `
-(vírgula + espaço) — que é exatamente como o ARCA junta as siglas. Então:
-- `RMN, RMP` → vira a lista `["RMN", "RMP"]` (marca as duas malhas)
-- `RMS` → vira `["RMS"]` (marca uma só) — funciona igual.
+**O que essa expressão faz:** o `replace` troca cada `, ` (vírgula + espaço) por
+`"},{"Value":"` e o `concat` fecha as pontas:
+- `RMN, RMP` → `[{"Value":"RMN"},{"Value":"RMP"}]` (marca as duas malhas)
+- `RMS` → `[{"Value":"RMS"}]` (marca uma só) — funciona igual.
+- vazio → `[]` (não marca nada, sem quebrar o fluxo).
 
 ---
 

@@ -283,20 +283,25 @@ que você escolheu na Etapa C:
 ### Malha — coluna de escolha múltipla
 
 A coluna Malha aceita **várias malhas**, mas o ARCA envia um **texto**
-(`RMN, RMP`). Transforme em lista com `split`:
+(`RMN, RMP`). A coluna exige uma lista de **objetos** no formato
+`[{"Value":"RMN"},{"Value":"RMP"}]` — um `split` simples (que gera
+`["RMN","RMP"]`, lista de textos) é **recusado com BadRequest**.
 
 1. No campo **Malha** do "Criar item", clique no ícone **⇆ "Alternar para inserir
    toda a matriz"** (*Switch to input entire array*).
 2. Na caixa que abrir, aba **Expressão (fx)**, cole:
 
    ```
-   split(triggerBody()?['malha'], ', ')
+   if(empty(triggerBody()?['malha']), json('[]'), json(concat('[{"Value":"', replace(triggerBody()?['malha'], ', ', '"},{"Value":"'), '"}]')))
    ```
 
-Isso corta o texto a cada `, ` (vírgula + espaço). Assim `RMN, RMP` vira
-`["RMN", "RMP"]` (marca as duas) e `RMS` vira `["RMS"]` (marca uma). As siglas
-que o ARCA envia — `RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas` — batem
-exatamente com as opções da coluna.
+**Como funciona:** o `replace` troca cada `, ` (vírgula + espaço) por
+`"},{"Value":"` e o `concat` fecha as pontas — `RMN, RMP` vira
+`[{"Value":"RMN"},{"Value":"RMP"}]` (marca as duas) e `RMP` vira
+`[{"Value":"RMP"}]` (marca uma). O `if(empty(...))` protege o caso de malha
+vazia (envia lista vazia em vez de quebrar). As siglas que o ARCA envia —
+`RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas` — batem exatamente com as
+opções da coluna.
 
 ---
 
