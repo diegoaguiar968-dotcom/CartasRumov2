@@ -83,6 +83,21 @@ no navegador do usuário.
 > A **URL do webhook** (um endereço longo com um `sig=...` no final) só aparece
 > **depois que você salva o fluxo pela primeira vez**. Guarde-a para a Etapa G.
 
+> ⚠️ **Deu erro 401 `DirectApiAuthorizationRequired` / "The OAuth authorization
+> scheme is required"?** O gatilho está exigindo **login OAuth** para ser
+> disparado, mas o ARCA chama pela **chave SAS** que já vem na URL (`sig=...`).
+> Corrija no gatilho:
+> 1. Abra o gatilho **"Quando uma solicitação HTTP é recebida"**.
+> 2. Clique em **"+ Adicionar novo parâmetro"**.
+> 3. Marque **"Quem pode disparar o gatilho?"** (*Who can trigger the flow?*).
+> 4. Selecione **"Qualquer pessoa"** (*Anyone*) e **salve**.
+>
+> Ao salvar, a **URL pode mudar** — copie a nova e atualize `SHAREPOINT_WEBHOOK_URL`
+> no Render. Se "Qualquer pessoa" estiver **bloqueado**, o tenant obriga OAuth por
+> política de administrador: nesse caso o webhook direto não funciona sem um app
+> registrado no Entra ID — use o caminho do **Microsoft Forms**
+> (`GUIA-SHAREPOINT-FORMS.md`).
+
 ---
 
 ## 4. Etapa B — O segredo (respondendo: "onde eu defino o segredo?")
