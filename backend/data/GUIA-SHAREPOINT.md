@@ -1,33 +1,62 @@
-# Integração ARCA → SharePoint (Power Automate) — ALTERNATIVA PREMIUM
+# Guia: registrar cartas no SharePoint automaticamente (Power Automate / Webhook)
 
-> ⚠️ **Este NÃO é o guia que a equipe usa hoje.** Ele depende do gatilho
-> "Quando uma solicitação HTTP é recebida", que é um **conector premium** do
-> Power Automate. Como não temos essa licença, o caminho em uso é o
-> **`GUIA-SHAREPOINT-FORMS.md`** (via Microsoft Forms, gratuito).
->
-> Guarde este arquivo apenas como **referência** — caso um dia a equipe adquira
-> o Power Automate Premium, ele descreve o registro 100% automático (um clique
-> no ARCA cria o item e anexa o `.docx`, sem precisar abrir formulário).
+Este é o caminho **100% automático**: você clica em **"Registrar no SharePoint"**
+no histórico do ARCA e o item é criado sozinho na lista — sem abrir formulário,
+com opção de anexar o `.docx`.
 
-Este guia liga o botão **"Registrar no SharePoint"** do histórico do ARCA à sua
-lista **Regulatório – Cartas e Ofícios**, criando o item automaticamente.
-
-## Como funciona
-
-```
-ARCA (histórico) ──POST──▶ Backend ARCA ──POST(JSON)──▶ Webhook do Power Automate ──▶ Cria item na lista
-```
-
-O segredo do webhook fica **no servidor** (variável de ambiente no Render), nunca
-no navegador.
+> ✅ **Use este guia se o gatilho "Quando uma solicitação HTTP é recebida"
+> estiver disponível para você** no Power Automate. Ele já foi considerado
+> "premium"; se na sua conta ele funciona, siga por aqui. Se **não** estiver
+> disponível, use o outro caminho: **`GUIA-SHAREPOINT-FORMS.md`** (via Microsoft
+> Forms, gratuito).
 
 ---
 
-## Passo 1 — Criar o fluxo no Power Automate
+## 1. Como funciona (a ideia)
+
+```
+   ┌─────────┐   1 clique    ┌──────────────┐   POST (JSON)   ┌───────────────────┐
+   │  ARCA   │ ────────────▶ │ Backend ARCA │ ──────────────▶ │ Fluxo Power       │
+   │(histórico)│             │  (Render)    │  com um segredo │ Automate (webhook)│
+   └─────────┘               └──────────────┘                 └─────────┬─────────┘
+                                                                        │ cria o item
+                                                                        ▼
+                                                              ┌───────────────────┐
+                                                              │ Lista SharePoint  │
+                                                              └───────────────────┘
+```
+
+Diferença para o caminho via Forms: **não há etapa manual**. O ARCA envia os
+dados direto para um "endereço secreto" (o **webhook**) que o Power Automate
+gera. Por isso é importante **proteger esse endereço com um segredo** (é a sua
+Pergunta 1, respondida na Etapa B).
+
+O segredo do webhook fica **no servidor** (variável de ambiente no Render), nunca
+no navegador do usuário.
+
+---
+
+## 2. Visão geral das etapas (uma vez só)
+
+| Etapa | Onde | O que faz |
+|---|---|---|
+| A | Power Automate | Criar o fluxo + gatilho HTTP + colar o esquema JSON |
+| B | Power Automate | **Validar o segredo** (proteção do endereço) |
+| C | Power Automate | Resolver o **Responsável** (se a coluna for do tipo Pessoa) |
+| D | Power Automate | **Criar item** na lista (mapear as colunas) |
+| E | Power Automate | *(opcional)* Anexar o `.docx` |
+| F | Power Automate | *(opcional)* Devolver o link do item criado |
+| G | Render (ARCA) | Colar a URL do webhook e o segredo nas variáveis |
+
+---
+
+## 3. Etapa A — Criar o fluxo e o gatilho
 
 1. Em **make.powerautomate.com** → **Criar** → **Fluxo de nuvem instantâneo**.
-2. Gatilho: **"Quando uma solicitação HTTP é recebida"** (conector premium).
-3. No gatilho, cole este **Esquema JSON do corpo da solicitação**:
+2. Em "Escolher como disparar", selecione **"Quando uma solicitação HTTP é
+   recebida"** e clique em **Criar**.
+3. No gatilho, no campo **"Esquema JSON do corpo da solicitação"**, cole
+   exatamente este esquema (ele descreve os campos que o ARCA envia):
 
 ```json
 {
@@ -51,86 +80,203 @@ no navegador.
 }
 ```
 
-## Passo 2 — (Recomendado) Validar o segredo
+> A **URL do webhook** (um endereço longo com um `sig=...` no final) só aparece
+> **depois que você salva o fluxo pela primeira vez**. Guarde-a para a Etapa G.
 
-Adicione uma ação **Condição**: `sharedSecret` (do gatilho) **é igual a** o valor
-que você definirá em `SHAREPOINT_WEBHOOK_SECRET`. Se falhar, use **Resposta** com
-status 401 e encerre. Isso impede que qualquer um que descubra a URL crie itens.
+---
 
-## Passo 3 — Resolver o "Responsável" (campo Pessoa)
+## 4. Etapa B — O segredo (respondendo: "onde eu defino o segredo?")
 
-Antes de criar o item, adicione **Office 365 Users → Obter perfil do usuário (V2)**,
-com **UPN/E-mail** = `responsavelEmail`. Guarde o resultado para o campo Pessoa.
-(Se `responsavelEmail` vier vazio — cartas antigas — pule esta etapa e deixe o
-campo Responsável em branco para preencher à mão.)
+**Conceito:** o segredo (`sharedSecret`) é uma **senha combinada** entre o ARCA e
+o fluxo. O ARCA manda essa senha dentro de cada requisição; o fluxo confere se a
+senha bate. Se não bater, ele recusa. Assim, mesmo que alguém descubra a URL, não
+consegue criar itens sem saber o segredo.
 
-## Passo 4 — Criar o item
+**Você define esse segredo em DOIS lugares — e eles têm que ser IDÊNTICOS:**
 
-Ação **SharePoint → Criar item**:
-
-| Coluna da lista | Valor (do gatilho) |
+| Lugar | O que fazer |
 |---|---|
-| Título | `titulo` |
-| Responsável (Claims) | e-mail do perfil obtido no Passo 3 (`responsavelEmail`) |
+| 1. **Render** (ARCA) | Variável `SHAREPOINT_WEBHOOK_SECRET` = um texto que você inventa (ex.: uma senha longa aleatória `arca-7fК9x...`). Ver Etapa G. |
+| 2. **Fluxo** (Power Automate) | Na Condição abaixo, você digita **esse mesmo texto** para comparar. |
+
+> Você **inventa** o valor (qualquer texto difícil de adivinhar). O ARCA já envia
+> automaticamente o que estiver em `SHAREPOINT_WEBHOOK_SECRET` no campo
+> `sharedSecret` de cada requisição — você não precisa mexer em código.
+
+**Como montar a Condição no fluxo:**
+
+1. Depois do gatilho, clique em **+ Nova etapa** → **Controle** → **Condição**.
+2. A Condição tem três caixas. Preencha assim:
+   - **Caixa da esquerda:** clique nela → **Conteúdo dinâmico** → escolha
+     `sharedSecret` (veio do gatilho).
+   - **Caixa do meio:** selecione **é igual a**.
+   - **Caixa da direita:** **digite o segredo literal** (o mesmíssimo texto que
+     você pôs em `SHAREPOINT_WEBHOOK_SECRET`).
+3. A Condição cria dois caminhos:
+   - **"Se não" (If no)** → aqui a senha está errada. Adicione:
+     - **Resposta** (*Response*) com **Status = 401**;
+     - depois **Controle → Encerrar** (*Terminate*) com status "Com falha".
+   - **"Se sim" (If yes)** → aqui a senha confere. **Todo o resto do fluxo
+     (Etapas C, D, E, F) vai DENTRO deste ramo.**
+
+> Essa etapa é **recomendada**, mas opcional. A própria URL do gatilho já tem uma
+> assinatura difícil de adivinhar (`sig=...`); o segredo é uma **segunda camada**
+> de proteção. Se quiser simplificar no primeiro teste, pode pular — mas coloque
+> antes de usar pra valer.
+
+---
+
+## 5. Etapa C — Resolver o "Responsável" (respondendo: "onde é o botão de usuários?")
+
+**Primeiro, um esclarecimento:** não existe um "botão de adicionar usuários". O
+que o guia pedia é **adicionar uma AÇÃO** chamada *"Obter perfil do usuário
+(V2)"*, do conector **"Usuários do Office 365"**. Ela serve para transformar um
+**e-mail** em um **usuário de verdade**.
+
+**Por que isso é necessário?** Depende do tipo da coluna **Responsável** na sua
+lista:
+
+- **Se "Responsável" é uma coluna do tipo _Pessoa_** (Pessoa ou Grupo): ela não
+  aceita texto — precisa de uma identidade de usuário real. Aí você **precisa**
+  desta etapa.
+- **Se "Responsável" é só _texto_** (ou se você usa a coluna "E-mail do
+  Responsável" como texto): **pule esta etapa** e, no Criar item (Etapa D),
+  mapeie o e-mail/nome direto, como texto.
+
+> Como saber o tipo? Nas **configurações da lista** no SharePoint, veja o tipo da
+> coluna Responsável. Ou, na ação **Criar item** (Etapa D), se a coluna aparecer
+> pedindo **"Claims"**, é do tipo Pessoa.
+
+**Como adicionar a ação (caso a coluna seja Pessoa):**
+
+1. Dentro do ramo **"Se sim"**, clique em **+ Nova etapa**.
+2. Na busca, digite **"Office 365 Users"** (ou "Usuários do Office 365").
+3. Escolha a ação **"Obter perfil do usuário (V2)"**.
+4. No campo **"Usuário (UPN)"**, clique → **Conteúdo dinâmico** → selecione
+   `responsavelEmail`.
+
+Depois, na Etapa D, o campo Responsável (Claims) vai apontar para o **e-mail**
+retornado por esta ação.
+
+> Se `responsavelEmail` vier **vazio** (cartas antigas, geradas antes do campo de
+> e-mail existir), esta ação falha. Nesse caso, deixe o Responsável em branco e
+> preencha à mão no item — ou proteja a ação com uma condição de "e-mail não
+> vazio".
+
+---
+
+## 6. Etapa D — Criar o item na lista
+
+1. Ainda no ramo **"Se sim"**, **+ Nova etapa** → **SharePoint** →
+   **"Criar item"**.
+2. Escolha o **Endereço do site** e o **Nome da lista** (ex.: Cartas 2026).
+3. Mapeie cada coluna com o conteúdo dinâmico do gatilho:
+
+| Coluna da lista | Valor (conteúdo dinâmico do gatilho) |
+|---|---|
+| Título / Número da Carta | `titulo` |
+| **Responsável** (se for Pessoa: "Claims") | e-mail vindo do **"Obter perfil do usuário (V2)"** (Etapa C). Se for texto, use `responsavel` ou `responsavelEmail`. |
+| E-mail do Responsável | `responsavelEmail` |
 | Área do Responsável | `area` |
 | Tema | `tema` |
 | Orgão | `orgao` |
-| Malha | `malha` *(ver nota)* |
+| **Malha** | **ver seção "Malha" abaixo** |
 | Ofício | `oficio` |
-| Forma de Envio | `formaEnvio` (SEI) |
+| Forma de Envio | `formaEnvio` |
 | Número do Processo | `processo` |
 | Assuntos | `assuntos` |
 
-Deixe **em branco** (preenchidos após protocolar no SEI): Conferida?, Data de
-Envio, Dilação?, Prazo com Dilação, Protocolo.
+Deixe **em branco** (preenchidos depois de protocolar no SEI): **Conferida?,
+Data de Envio, Dilação?, Prazo com Dilação, Protocolo.**
 
-> **Nota Malha:** se a coluna Malha for de **escolha múltipla**, o valor precisa
-> ser enviado como coleção. O ARCA manda a(s) sigla(s) em texto (ex.: `RMP` ou
-> `RMP, RMS`). Use **Selecionar/Dividir** por vírgula para montar o array de
-> escolhas, ou mapeie via **Switch** para os valores exatos da sua coluna.
+### Malha — coluna de escolha múltipla
 
-## Passo 5 — (Opcional) Anexar o .docx
+A coluna Malha aceita **várias malhas**, mas o ARCA envia um **texto**
+(`RMN, RMP`). Transforme em lista com `split`:
 
-Se quiser o arquivo no item, após criar o item adicione **SharePoint → Adicionar
-anexo**:
-- **Id** = ID do item criado
-- **Nome do arquivo** = `docxNome`
-- **Conteúdo do arquivo** = `base64ToBinary(triggerBody()?['docxBase64'])`
+1. No campo **Malha** do "Criar item", clique no ícone **⇆ "Alternar para inserir
+   toda a matriz"** (*Switch to input entire array*).
+2. Na caixa que abrir, aba **Expressão (fx)**, cole:
 
-## Passo 6 — Responder com a URL do item (opcional)
+   ```
+   split(triggerBody()?['malha'], ', ')
+   ```
 
-Ação **Resposta**: status **200**, corpo `{ "itemUrl": "<link do item>" }`. O ARCA
-mostra essa URL na confirmação.
+Isso corta o texto a cada `, ` (vírgula + espaço). Assim `RMN, RMP` vira
+`["RMN", "RMP"]` (marca as duas) e `RMS` vira `["RMS"]` (marca uma). As siglas
+que o ARCA envia — `RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas` — batem
+exatamente com as opções da coluna.
 
 ---
 
-## Passo 7 — Conectar no ARCA (Render)
+## 7. Etapa E — Anexar o `.docx` (opcional)
 
-Copie a **URL HTTP POST** que o Power Automate gerou no gatilho e defina no Render
-(serviço do backend → Environment):
+Se quiser o arquivo dentro do item, depois do "Criar item" adicione
+**SharePoint → "Adicionar anexo"**:
+
+- **Id** = ID do item criado (conteúdo dinâmico do "Criar item").
+- **Nome do arquivo** = `docxNome`.
+- **Conteúdo do arquivo** = na aba Expressão, cole:
+  `base64ToBinary(triggerBody()?['docxBase64'])`.
+
+---
+
+## 8. Etapa F — Devolver o link do item (opcional)
+
+Se você quiser que o ARCA mostre o link do item criado, adicione ao final
+**Resposta** (*Response*): **Status 200**, corpo:
+
+```json
+{ "itemUrl": "<link do item>" }
+```
+
+(coloque o link do item usando o conteúdo dinâmico "Link para o item").
+
+---
+
+## 9. Etapa G — Conectar no ARCA (Render)
+
+1. **Salve o fluxo** e copie a **URL HTTP POST** do gatilho (Etapa A).
+2. No **Render** → serviço do **backend do ARCA** → **Environment**, defina:
 
 | Variável | Valor |
 |---|---|
-| `SHAREPOINT_WEBHOOK_URL` | a URL do gatilho do fluxo |
-| `SHAREPOINT_WEBHOOK_SECRET` | um segredo qualquer (o mesmo do Passo 2) |
+| `SHAREPOINT_WEBHOOK_URL` | a URL do gatilho do fluxo (copiada acima) |
+| `SHAREPOINT_WEBHOOK_SECRET` | o segredo que você inventou (o **mesmo** da Etapa B) |
+| `SHAREPOINT_MODE` | *(opcional)* `webhook` para forçar este modo |
 
-Pronto. Enquanto `SHAREPOINT_WEBHOOK_URL` não estiver definida, o botão apenas
-avisa que a integração não está configurada — nada quebra.
+> **Importante:** basta definir `SHAREPOINT_WEBHOOK_URL` que o ARCA **já troca**
+> para o modo automático (o botão vira **"Registrar no SharePoint"**), mesmo com
+> o template de Forms embutido. Use `SHAREPOINT_MODE=webhook` só se quiser
+> travar explicitamente. Sem `SHAREPOINT_WEBHOOK_URL`, o botão continua no modo
+> Forms (ou some, se você também remover o Forms).
 
 ---
 
-## Payload enviado pelo ARCA (referência)
+## 10. Testar
+
+1. No histórico do ARCA, abra uma carta e clique em **"Registrar no SharePoint"**.
+2. No Power Automate, veja o **Histórico de execuções** do fluxo: deve aparecer
+   uma execução verde.
+3. Confira o item novo na lista. Se o Responsável ficou vazio, reveja a Etapa C
+   (tipo da coluna). Se a Malha ficou vazia, reveja o `split` (Etapa D).
+4. Se der **401**, o segredo não bateu — confira se `SHAREPOINT_WEBHOOK_SECRET`
+   (Render) é idêntico ao texto digitado na Condição (Etapa B).
+
+---
+
+## 11. Payload que o ARCA envia (referência)
 
 ```json
 {
   "titulo": "0021/GREG/2026",
   "tema": "Encaminhamento de Documentos",
   "orgao": "ANTT",
-  "malha": "RMP",
+  "malha": "RMP, RMS",
   "oficio": "OFÍCIO SEI Nº 41045/2025",
   "processo": "50505.064442/2025-38",
   "formaEnvio": "SEI",
-  "assuntos": "Resposta Ofício",
+  "assuntos": "resposta a ofício",
   "responsavel": "Diego Bruno de Pinho",
   "responsavelEmail": "diego.pinho@rumo.com.br",
   "area": "Projetos - Regulatório",
@@ -139,3 +285,6 @@ avisa que a integração não está configurada — nada quebra.
   "sharedSecret": "•••"
 }
 ```
+
+> Em carta espontânea, `oficio` e `assuntos` podem vir vazios (o ofício só existe
+> em carta-resposta; o assunto é escolhido no histórico).

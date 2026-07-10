@@ -24,10 +24,20 @@ function formsTemplate() {
  *  - 'forms'   → link de Microsoft Forms pré-preenchido (sem premium)
  *  - 'webhook' → POST para o Power Automate / Make (SHAREPOINT_WEBHOOK_URL)
  *  - 'none'    → não configurado (botão oculto no frontend)
+ *
+ * Ordem de decisão:
+ *  1. SHAREPOINT_MODE (forms|webhook|none) força o modo explicitamente;
+ *  2. senão, se houver SHAREPOINT_WEBHOOK_URL, usa 'webhook' (registro automático);
+ *  3. senão, se houver template de Forms, usa 'forms';
+ *  4. senão, 'none'.
+ * Assim, definir a URL do webhook já ativa o modo automático mesmo com o
+ * template padrão de Forms embutido no código.
  */
 function sharepointMode() {
-  if (formsTemplate()) return 'forms';
+  const forcado = String(process.env.SHAREPOINT_MODE || '').trim().toLowerCase();
+  if (forcado === 'forms' || forcado === 'webhook' || forcado === 'none') return forcado;
   if (process.env.SHAREPOINT_WEBHOOK_URL) return 'webhook';
+  if (formsTemplate()) return 'forms';
   return 'none';
 }
 
@@ -110,7 +120,7 @@ async function registrarSharePoint(req, res, next) {
       oficio: e.oficio || '',
       processo: e.processo || '',
       formaEnvio: e.forma_envio || 'SEI',
-      assuntos: e.assuntos || 'Resposta Ofício',
+      assuntos: e.assuntos || '',
       responsavel: e.responsavel || '',
       responsavelEmail: e.responsavel_email || '',
       area: e.area || '',
