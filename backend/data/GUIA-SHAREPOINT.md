@@ -152,8 +152,24 @@ lista:
 1. Dentro do ramo **"Se sim"**, clique em **+ Nova etapa**.
 2. Na busca, digite **"Office 365 Users"** (ou "Usuários do Office 365").
 3. Escolha a ação **"Obter perfil do usuário (V2)"**.
-4. No campo **"Usuário (UPN)"**, clique → **Conteúdo dinâmico** → selecione
-   `responsavelEmail`.
+4. No campo **"Usuário (UPN)"**, informe o e-mail do responsável. Tente pelo
+   **Conteúdo dinâmico** → `responsavelEmail`.
+
+> ⚠️ **`responsavelEmail` não aparece no Conteúdo dinâmico?** Isso acontece
+> quando o **Esquema JSON do gatilho** (Etapa A) não foi reconhecido — sem ele,
+> o Power Automate não sabe quais campos o corpo tem. Duas saídas:
+>
+> - **Solução garantida (recomendada):** no campo "Usuário (UPN)", abra a aba
+>   **Expressão (fx)** e cole:
+>   ```
+>   triggerBody()?['responsavelEmail']
+>   ```
+>   Isso pega o e-mail direto do corpo, independente do painel de conteúdo
+>   dinâmico. (Vale para qualquer campo: `triggerBody()?['area']`,
+>   `triggerBody()?['tema']`, etc.)
+> - **Corrigir a causa:** volte ao gatilho, confirme que o **Esquema JSON** está
+>   colado corretamente e **salve o fluxo**. Depois de salvar, os campos
+>   (`responsavelEmail`, `titulo`, ...) passam a aparecer no Conteúdo dinâmico.
 
 Depois, na Etapa D, o campo Responsável (Claims) vai apontar para o **e-mail**
 retornado por esta ação.
@@ -175,7 +191,7 @@ retornado por esta ação.
 | Coluna da lista | Valor (conteúdo dinâmico do gatilho) |
 |---|---|
 | Título / Número da Carta | `titulo` |
-| **Responsável** (se for Pessoa: "Claims") | e-mail vindo do **"Obter perfil do usuário (V2)"** (Etapa C). Se for texto, use `responsavel` ou `responsavelEmail`. |
+| **Responsável** (coluna Pessoa → campo "Claims") | ver **"Coluna Responsável (Pessoa)"** abaixo |
 | E-mail do Responsável | `responsavelEmail` |
 | Área do Responsável | `area` |
 | Tema | `tema` |
@@ -188,6 +204,25 @@ retornado por esta ação.
 
 Deixe **em branco** (preenchidos depois de protocolar no SEI): **Conferida?,
 Data de Envio, Dilação?, Prazo com Dilação, Protocolo.**
+
+### Coluna Responsável (Pessoa) — como preencher o "Claims"
+
+Como a coluna é do tipo **Pessoa**, o campo Responsável no "Criar item" aparece
+com um subcampo **"Claims"** (ele identifica o usuário). Preencha assim:
+
+- No subcampo **Claims**, use o **e-mail** do usuário obtido na Etapa C. Pelo
+  Conteúdo dinâmico, escolha o campo **"Email"** (ou "Nome UPN") da ação
+  **"Obter perfil do usuário (V2)"**.
+- Se preferir a expressão garantida, cole no Claims:
+  ```
+  outputs('Obter_o_perfil_do_usuário_(V2)')?['body/mail']
+  ```
+  (troque o nome entre aspas pelo nome exato da sua ação, se você a renomeou).
+
+> Por que não colocar o e-mail cru direto? Porque a coluna Pessoa valida o
+> usuário no diretório. O `mail` vindo do "Obter perfil do usuário (V2)" já é um
+> valor validado, então o SharePoint reconhece a pessoa. Se o e-mail não existir
+> no diretório, o "Criar item" falha nessa coluna — por isso a Etapa C existe.
 
 ### Malha — coluna de escolha múltipla
 
