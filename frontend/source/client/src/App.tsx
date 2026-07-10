@@ -22,7 +22,7 @@ import {
   RefreshCw,
   Share2,
 } from "lucide-react";
-import IdentifyWidget, { getResponsavel } from "./components/identify-widget";
+import IdentifyWidget, { getResponsavel, AREA_OPCOES } from "./components/identify-widget";
 import { InfoCard, PrimaryButton, SecondaryButton, TextField } from "./components/ui-kit";
 import Stepper from "./components/Stepper";
 import AjudaStep from "./components/steps/AjudaStep";
@@ -96,6 +96,27 @@ const MALHA_OPTIONS = [
   { key: "rumo", nome: "RUMO S.A. (Holding)", sigla: "RSA" },
 ];
 
+// Opções da coluna "Forma de Envio" no SharePoint
+const FORMA_OPCOES = ["SEI", "E-mail", "Presencialmente"];
+
+// Malhas operantes (a holding RSA fica de fora do atalho "Todas as malhas")
+const MALHAS_OPERANTES_KEYS = ["norte", "paulista", "oeste", "sul", "central"];
+
+// Converte a string de malha salva ("RMN, RMP" ou "Todas as malhas") em keys
+function malhaStrParaKeys(str: string): string[] {
+  const s = String(str || "").trim();
+  if (!s) return [];
+  if (s.toLowerCase() === "todas as malhas") return [...MALHAS_OPERANTES_KEYS];
+  const siglas = s.split(",").map((x) => x.trim().toUpperCase());
+  return MALHA_OPTIONS.filter((m) => siglas.includes(m.sigla)).map((m) => m.key);
+}
+// Converte keys de volta na string canônica (com atalho "Todas as malhas")
+function keysParaMalhaStr(keys: string[]): string {
+  const set = new Set(keys);
+  if (MALHAS_OPERANTES_KEYS.every((k) => set.has(k)) && !set.has("rumo")) return "Todas as malhas";
+  return MALHA_OPTIONS.filter((m) => set.has(m.key)).map((m) => m.sigla).join(", ");
+}
+
 type FlowType = "resposta" | "espontanea" | null;
 
 const STEPS_RESPOSTA = [
@@ -148,6 +169,7 @@ const CAMPOS_SHAREPOINT: { rot: string; chave: keyof HistoricoEntrada | null }[]
   { rot: "Dilação?", chave: null },
   { rot: "Prazo com Dilação", chave: null },
   { rot: "Forma de Envio", chave: "forma_envio" },
+  { rot: "Número do Processo", chave: "processo" },
   { rot: "Protocolo", chave: null },
 ];
 
@@ -601,19 +623,46 @@ export default function App() {
     }
   }
 
-  async function atualizarAssuntos(novo: string) {
+  // Salva um ou mais campos do histórico de forma otimista (com rollback).
+  // Usado por seletores e chips, que mudam de valor num clique só.
+  async function salvarCampoHist(patch: Partial<HistoricoEntrada>) {
     if (!histDetalhe) return;
-    const anterior = histDetalhe.assuntos;
-    setHistDetalhe((d) => (d ? { ...d, assuntos: novo } : d));
+    const id = histDetalhe.id;
+    const anterior: Partial<HistoricoEntrada> = {};
+    (Object.keys(patch) as (keyof HistoricoEntrada)[]).forEach((k) => {
+      (anterior as any)[k] = histDetalhe[k];
+    });
+    setHistDetalhe((d) => (d ? { ...d, ...patch } : d));
     try {
-      await atualizarHistoricoEntrada(histDetalhe.id, { assuntos: novo });
-      setHistEntradas((lista) =>
-        lista.map((e) => (e.id === histDetalhe.id ? { ...e, assuntos: novo } : e))
-      );
+      await atualizarHistoricoEntrada(id, patch as any);
+      setHistEntradas((lista) => lista.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     } catch (e: any) {
-      setHistDetalhe((d) => (d ? { ...d, assuntos: anterior } : d));
-      notificarErro(e.message || "Erro ao atualizar o assunto.");
+      setHistDetalhe((d) => (d ? { ...d, ...anterior } : d));
+      notificarErro(e.message || "Erro ao atualizar.");
     }
+  }
+
+  // Atualiza um campo de texto só localmente (persiste no onBlur).
+  function setCampoLocal(chave: keyof HistoricoEntrada, v: string) {
+    setHistDetalhe((d) => (d ? { ...d, [chave]: v } : d));
+  }
+
+  // Persiste um campo de texto ao sair do input (onBlur).
+  async function persistCampo(chave: keyof HistoricoEntrada) {
+    if (!histDetalhe) return;
+    const id = histDetalhe.id;
+    const valor = String(histDetalhe[chave] ?? "");
+    try {
+      await atualizarHistoricoEntrada(id, { [chave]: valor } as any);
+      setHistEntradas((lista) => lista.map((e) => (e.id === id ? { ...e, [chave]: valor } : e)));
+    } catch (e: any) {
+      notificarErro(e.message || "Erro ao salvar.");
+    }
+  }
+
+  // Atalho para o seletor de Assuntos.
+  async function atualizarAssuntos(novo: string) {
+    await salvarCampoHist({ assuntos: novo });
   }
 
   async function excluirDoHistorico(id: string) {
@@ -1467,65 +1516,125 @@ export default function App() {
                 </div>
                 <div className="space-y-0">
                   {CAMPOS_SHAREPOINT.map((c) => {
+                    const rowStyle = { borderBottom: "1px solid hsl(var(--border) / 0.35)", fontSize: "13px" };
+                    const labelStyle = { width: "160px", flexShrink: 0, color: "hsl(var(--text-muted))", fontSize: "12px", fontWeight: 600 } as const;
+                    const campoStyle = {
+                      background: "hsl(var(--surface-app))",
+                      border: "1px solid hsl(var(--border))",
+                      color: "hsl(var(--text-primary))",
+                    };
                     const val = c.chave ? String(histDetalhe[c.chave] ?? "") : "";
-                    const vazio = !val;
-                    // "Assuntos" é editável (seletor com as opções da lista)
+
+                    // Campos exclusivos do SharePoint (sem chave) — só leitura
+                    if (!c.chave) {
+                      return (
+                        <div key={c.rot} className="flex items-start gap-2 py-1.5" style={rowStyle}>
+                          <span style={{ ...labelStyle, paddingTop: "1px" }}>{c.rot}</span>
+                          <span className="flex-1" style={{ color: "hsl(var(--text-muted) / 0.6)", fontStyle: "italic" }}>
+                            (preencher no SharePoint)
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    // Título — identidade da carta, só leitura (com copiar)
+                    if (c.chave === "titulo") {
+                      return (
+                        <div key={c.rot} className="flex items-start gap-2 py-1.5" style={rowStyle}>
+                          <span style={{ ...labelStyle, paddingTop: "1px" }}>{c.rot}</span>
+                          <span className="flex-1" style={{ color: "hsl(var(--text-secondary))", wordBreak: "break-word" }}>{val}</span>
+                          <button
+                            onClick={() => copiarTexto(c.rot, val)}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs flex-shrink-0"
+                            style={{ background: "none", border: `1px solid ${copiado === c.rot ? "hsl(var(--rumo-green))" : "hsl(var(--border))"}`, color: copiado === c.rot ? "hsl(var(--rumo-green))" : "hsl(var(--text-muted))", cursor: "pointer" }}
+                          >
+                            {copiado === c.rot ? "✓" : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    // Assuntos — seletor
                     if (c.chave === "assuntos") {
                       return (
-                        <div
-                          key={c.rot}
-                          className="flex items-center gap-2 py-1.5"
-                          style={{ borderBottom: "1px solid hsl(var(--border) / 0.35)", fontSize: "13px" }}
-                        >
-                          <span style={{ width: "160px", flexShrink: 0, color: "hsl(var(--text-muted))", fontSize: "12px", fontWeight: 600 }}>
-                            {c.rot}
-                          </span>
-                          <select
-                            value={ASSUNTOS_OPCOES.includes(val) ? val : ""}
-                            onChange={(e) => atualizarAssuntos(e.target.value)}
-                            className="flex-1 px-2 py-1 rounded text-sm"
-                            style={{
-                              background: "hsl(var(--surface-app))",
-                              border: "1px solid hsl(var(--border))",
-                              color: "hsl(var(--text-primary))",
-                            }}
-                          >
+                        <div key={c.rot} className="flex items-center gap-2 py-1.5" style={rowStyle}>
+                          <span style={labelStyle}>{c.rot}</span>
+                          <select value={ASSUNTOS_OPCOES.includes(val) ? val : ""} onChange={(e) => atualizarAssuntos(e.target.value)} className="flex-1 px-2 py-1 rounded text-sm" style={campoStyle}>
                             {!ASSUNTOS_OPCOES.includes(val) && <option value="">{val || "(selecionar)"}</option>}
-                            {ASSUNTOS_OPCOES.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
+                            {ASSUNTOS_OPCOES.map((o) => (<option key={o} value={o}>{o}</option>))}
                           </select>
                         </div>
                       );
                     }
+
+                    // Área do Responsável — seletor
+                    if (c.chave === "area") {
+                      return (
+                        <div key={c.rot} className="flex items-center gap-2 py-1.5" style={rowStyle}>
+                          <span style={labelStyle}>{c.rot}</span>
+                          <select value={AREA_OPCOES.includes(val) ? val : ""} onChange={(e) => salvarCampoHist({ area: e.target.value })} className="flex-1 px-2 py-1 rounded text-sm" style={campoStyle}>
+                            {!AREA_OPCOES.includes(val) && <option value="">{val || "(selecionar)"}</option>}
+                            {AREA_OPCOES.map((o) => (<option key={o} value={o}>{o}</option>))}
+                          </select>
+                        </div>
+                      );
+                    }
+
+                    // Forma de Envio — seletor
+                    if (c.chave === "forma_envio") {
+                      return (
+                        <div key={c.rot} className="flex items-center gap-2 py-1.5" style={rowStyle}>
+                          <span style={labelStyle}>{c.rot}</span>
+                          <select value={FORMA_OPCOES.includes(val) ? val : ""} onChange={(e) => salvarCampoHist({ forma_envio: e.target.value })} className="flex-1 px-2 py-1 rounded text-sm" style={campoStyle}>
+                            {!FORMA_OPCOES.includes(val) && <option value="">{val || "(selecionar)"}</option>}
+                            {FORMA_OPCOES.map((o) => (<option key={o} value={o}>{o}</option>))}
+                          </select>
+                        </div>
+                      );
+                    }
+
+                    // Malha — chips de múltipla seleção (clique alterna)
+                    if (c.chave === "malha") {
+                      const keys = malhaStrParaKeys(val);
+                      return (
+                        <div key={c.rot} className="flex items-start gap-2 py-1.5" style={rowStyle}>
+                          <span style={{ ...labelStyle, paddingTop: "3px" }}>{c.rot}</span>
+                          <div className="flex-1 flex flex-wrap gap-1">
+                            {MALHA_OPTIONS.map((m) => {
+                              const on = keys.includes(m.key);
+                              return (
+                                <button
+                                  key={m.key}
+                                  title={m.nome}
+                                  onClick={() => {
+                                    const set = new Set(malhaStrParaKeys(String(histDetalhe.malha ?? "")));
+                                    if (set.has(m.key)) set.delete(m.key); else set.add(m.key);
+                                    salvarCampoHist({ malha: keysParaMalhaStr(Array.from(set)) });
+                                  }}
+                                  className="px-2 py-0.5 rounded text-xs"
+                                  style={{ cursor: "pointer", border: `1px solid ${on ? "hsl(var(--rumo-green))" : "hsl(var(--border))"}`, background: on ? "hsl(var(--rumo-green) / 0.15)" : "transparent", color: on ? "hsl(var(--rumo-green))" : "hsl(var(--text-muted))", fontWeight: on ? 600 : 400 }}
+                                >
+                                  {m.sigla}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Demais campos — texto editável (responsável, tema, órgão, ofício, processo)
                     return (
-                      <div
-                        key={c.rot}
-                        className="flex items-start gap-2 py-1.5"
-                        style={{ borderBottom: "1px solid hsl(var(--border) / 0.35)", fontSize: "13px" }}
-                      >
-                        <span style={{ width: "160px", flexShrink: 0, color: "hsl(var(--text-muted))", fontSize: "12px", fontWeight: 600, paddingTop: "1px" }}>
-                          {c.rot}
-                        </span>
-                        <span className="flex-1" style={{ color: vazio ? "hsl(var(--text-muted) / 0.6)" : "hsl(var(--text-secondary))", fontStyle: vazio ? "italic" : "normal", wordBreak: "break-word" }}>
-                          {vazio ? "(preencher no SharePoint)" : val}
-                        </span>
-                        {!vazio && (
-                          <button
-                            onClick={() => copiarTexto(c.rot, val)}
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs flex-shrink-0"
-                            style={{
-                              background: "none",
-                              border: `1px solid ${copiado === c.rot ? "hsl(var(--rumo-green))" : "hsl(var(--border))"}`,
-                              color: copiado === c.rot ? "hsl(var(--rumo-green))" : "hsl(var(--text-muted))",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {copiado === c.rot ? "✓" : <Copy className="w-3 h-3" />}
-                          </button>
-                        )}
+                      <div key={c.rot} className="flex items-center gap-2 py-1.5" style={rowStyle}>
+                        <span style={labelStyle}>{c.rot}</span>
+                        <input
+                          value={val}
+                          onChange={(e) => setCampoLocal(c.chave!, e.target.value)}
+                          onBlur={() => persistCampo(c.chave!)}
+                          placeholder="(vazio)"
+                          className="flex-1 px-2 py-1 rounded text-sm"
+                          style={campoStyle}
+                        />
                       </div>
                     );
                   })}

@@ -242,7 +242,18 @@ export async function excluirHistoricoEntrada(id: string): Promise<{ success: bo
 
 export async function atualizarHistoricoEntrada(
   id: string,
-  dados: { responsavel?: string; area?: string; assuntos?: string }
+  dados: {
+    responsavel?: string;
+    responsavel_email?: string;
+    area?: string;
+    assuntos?: string;
+    tema?: string;
+    orgao?: string;
+    malha?: string;
+    oficio?: string;
+    processo?: string;
+    forma_envio?: string;
+  }
 ): Promise<{ success: boolean }> {
   const res = await req(`/api/historico/${id}`, {
     method: "PATCH",

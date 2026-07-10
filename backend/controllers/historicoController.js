@@ -173,21 +173,36 @@ async function detalheHistorico(req, res, next) {
   }
 }
 
+// Colunas que a edição inline do histórico pode alterar (whitelist — evita
+// injeção e protege colunas de identidade/sistema como id, titulo, criado_em).
+const CAMPOS_EDITAVEIS = [
+  'responsavel', 'responsavel_email', 'area', 'assuntos', 'tema',
+  'orgao', 'malha', 'oficio', 'processo', 'forma_envio',
+];
+
 /**
- * PATCH /api/historico/:id — edita campos de atribuição (responsável/área/assuntos).
+ * PATCH /api/historico/:id — edita campos do registro (edição inline no histórico).
+ * Aceita qualquer subconjunto de CAMPOS_EDITAVEIS; ignora o resto.
  */
 async function atualizarHistorico(req, res, next) {
   try {
     if (!isEnabled()) return res.status(503).json({ success: false, message: 'Banco de dados não configurado.' });
-    const { responsavel, area, assuntos } = req.body || {};
+    const body = req.body || {};
+    const sets = [];
+    const vals = [];
+    for (const campo of CAMPOS_EDITAVEIS) {
+      if (body[campo] !== undefined) {
+        vals.push(body[campo]);
+        sets.push(`${campo} = $${vals.length}`);
+      }
+    }
+    if (!sets.length) {
+      return res.status(400).json({ success: false, message: 'Nenhum campo editável informado.' });
+    }
+    vals.push(req.params.id);
     const { rows } = await query(
-      `UPDATE historico
-         SET responsavel = COALESCE($1, responsavel),
-             area        = COALESCE($2, area),
-             assuntos    = COALESCE($3, assuntos)
-       WHERE id = $4
-       RETURNING id, responsavel, area, assuntos`,
-      [responsavel ?? null, area ?? null, assuntos ?? null, req.params.id]
+      `UPDATE historico SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`,
+      vals
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Entrada não encontrada.' });
     res.json({ success: true, entrada: rows[0] });
