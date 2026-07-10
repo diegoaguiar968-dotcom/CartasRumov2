@@ -68,7 +68,7 @@ async function formsUrl(req, res, next) {
       ZZPROCESSOZZ: e.processo || '',
       ZZAREAZZ: e.area || '',
       ZZFORMAZZ: e.forma_envio || 'SEI',
-      ZZASSUNTOSZZ: e.assuntos || 'Resposta a Ofício',
+      ZZASSUNTOSZZ: e.assuntos || 'Resposta Ofício',
       ZZRESPONSAVELZZ: e.responsavel || '',
       ZZEMAILZZ: e.responsavel_email || '',
     };

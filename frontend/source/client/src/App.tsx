@@ -150,7 +150,7 @@ const ASSUNTOS_OPCOES = [
   "solicitação de acesso",
   "fiscalização",
   "RDT e RPMF",
-  "Resposta a Ofício",
+  "Resposta Ofício",
   "outro",
 ];
 
@@ -496,7 +496,7 @@ export default function App() {
       // Na espontânea, ambos vão em branco (o usuário escolhe o Assuntos no histórico).
       const isResposta = flowType === "resposta";
       const oficioSp = isResposta ? minutaMeta?.referencia || "" : "";
-      const assuntosSp = isResposta ? "Resposta a Ofício" : "";
+      const assuntosSp = isResposta ? "Resposta Ofício" : "";
       const nome = await downloadDocx(numeroCarta, minutaTexto, {
         ...minutaMeta,
         responsavel,

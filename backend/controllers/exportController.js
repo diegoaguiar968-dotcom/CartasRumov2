@@ -228,7 +228,7 @@ async function exportarDocx(req, res, next) {
     const responsavelEmail = meta.responsavelEmail ?? '';
     const area             = meta.area             ?? '';
     // Ofício e Assuntos para o histórico/SharePoint vêm explícitos do frontend:
-    // resposta → nº do ofício + "Resposta a Ofício"; espontânea → em branco.
+    // resposta → nº do ofício + "Resposta Ofício"; espontânea → em branco.
     // Fallback (clientes antigos): comportamento anterior.
     const oficioSp   = meta.oficio   !== undefined ? meta.oficio   : (referencia || numeroOficio);
     const assuntosSp = meta.assuntos !== undefined ? meta.assuntos : undefined;
