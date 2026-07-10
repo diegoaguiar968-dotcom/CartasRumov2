@@ -206,6 +206,7 @@ retornado por esta ação.
 | **Responsável** (coluna Pessoa → campo "Claims") | ver **"Coluna Responsável (Pessoa)"** abaixo |
 | E-mail do Responsável | `responsavelEmail` |
 | Área do Responsável | `area` |
+| **Data de Envio** | **ver "Data de Envio (hoje automático)" abaixo** |
 | Tema | `tema` |
 | Orgão | `orgao` |
 | **Malha** | **ver seção "Malha" abaixo** |
@@ -215,7 +216,30 @@ retornado por esta ação.
 | Assuntos | `assuntos` |
 
 Deixe **em branco** (preenchidos depois de protocolar no SEI): **Conferida?,
-Data de Envio, Dilação?, Prazo com Dilação, Protocolo.**
+Dilação?, Prazo com Dilação, Protocolo.**
+
+### Data de Envio (hoje automático)
+
+A Data de Envio é preenchida **automaticamente com a data de hoje** no momento em
+que o item é criado. Se a carta for enviada em outro dia, a pessoa **edita esse
+campo direto na lista** do SharePoint depois.
+
+No campo **Data de Envio** do "Criar item", aba **Expressão (fx)**, cole:
+
+```
+convertFromUtc(utcNow(), 'E. South America Standard Time', 'yyyy-MM-dd')
+```
+
+- `utcNow()` = agora (horário universal); `convertFromUtc(... 'E. South America
+  Standard Time' ...)` ajusta para o **fuso de Brasília**, evitando que perto da
+  meia-noite grave o dia errado.
+- `'yyyy-MM-dd'` devolve **só a data** (ex.: `2026-07-10`), ideal para uma coluna
+  do tipo Data. Se a sua coluna for **Data e Hora**, pode usar `utcNow()` direto
+  ou o formato `'yyyy-MM-ddTHH:mm:ss'`.
+
+> Isso não trava a data: é só o **valor inicial**. Qualquer pessoa com acesso à
+> lista pode abrir o item e mudar a Data de Envio quando o envio real for em outra
+> data.
 
 ### Coluna Responsável (Pessoa) — como preencher o "Claims"
 

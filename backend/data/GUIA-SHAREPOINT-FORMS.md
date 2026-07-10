@@ -73,7 +73,7 @@ existe **depois** (protocolar no SEI), então ficam para você preencher na list
 | 1 | Número da Carta | ✅ | `ZZTITULOZZ` — ex.: `0703/GREG/2026` |
 | 2 | E-mail do Responsável | ✅ | `ZZEMAILZZ` — do "Identifique-se" |
 | 3 | Área do Responsável | ✅ | `ZZAREAZZ` — do "Identifique-se" (lista suspensa) |
-| 4 | Data de envio | ⬜ | *(você preenche na lista após protocolar)* |
+| 4 | Data de envio | 🔷 | *(o fluxo preenche com hoje; editável na lista — ver Etapa D)* |
 | 5 | Tema | ✅ | `ZZTEMAZZ` |
 | 6 | Órgão | ✅ | `ZZORGAOZZ` — normalmente `ANTT` |
 | 7 | Malha | ✅ | `ZZMALHAZZ` — 1 ou mais siglas, ex.: `RMN, RMP` |
@@ -228,8 +228,19 @@ linha na lista.
 5. **Salve** o fluxo.
 
 Deixe **em branco** (você preenche na lista depois de protocolar no SEI):
-**Data de Envio, Dilação?, Prazo com Dilação, Protocolo** (e "Conferida?", se
-existir).
+**Dilação?, Prazo com Dilação, Protocolo** (e "Conferida?", se existir).
+
+**Data de Envio (hoje automático):** no campo Data de Envio do "Criar item", aba
+**Expressão (fx)**, cole:
+
+```
+convertFromUtc(utcNow(), 'E. South America Standard Time', 'yyyy-MM-dd')
+```
+
+Isso grava a **data de hoje** (fuso de Brasília) ao criar o item. É só o valor
+inicial — se o envio for em outro dia, a pessoa edita a Data de Envio direto na
+lista depois. (Coluna do tipo Data e Hora? Use `utcNow()` ou
+`'yyyy-MM-ddTHH:mm:ss'`.)
 
 ### Malha — o passo especial (coluna de escolha múltipla)
 
