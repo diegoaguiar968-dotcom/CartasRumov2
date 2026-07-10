@@ -1,4 +1,13 @@
-# Integração ARCA → SharePoint (Power Automate)
+# Integração ARCA → SharePoint (Power Automate) — ALTERNATIVA PREMIUM
+
+> ⚠️ **Este NÃO é o guia que a equipe usa hoje.** Ele depende do gatilho
+> "Quando uma solicitação HTTP é recebida", que é um **conector premium** do
+> Power Automate. Como não temos essa licença, o caminho em uso é o
+> **`GUIA-SHAREPOINT-FORMS.md`** (via Microsoft Forms, gratuito).
+>
+> Guarde este arquivo apenas como **referência** — caso um dia a equipe adquira
+> o Power Automate Premium, ele descreve o registro 100% automático (um clique
+> no ARCA cria o item e anexa o `.docx`, sem precisar abrir formulário).
 
 Este guia liga o botão **"Registrar no SharePoint"** do histórico do ARCA à sua
 lista **Regulatório – Cartas e Ofícios**, criando o item automaticamente.

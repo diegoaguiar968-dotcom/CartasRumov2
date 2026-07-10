@@ -1,167 +1,295 @@
-# Registro no SharePoint via Microsoft Forms (sem Power Automate Premium)
+# Guia: registrar cartas no SharePoint pelo Microsoft Forms
 
-Esta é a forma recomendada quando **não há licença Power Automate Premium**.
-O ARCA gera um **link do Microsoft Forms já pré-preenchido**; você revisa e
-clica em **Enviar**; um fluxo **padrão** (não-premium) cria o item na lista.
-
-```
-ARCA (botão "Registrar via formulário")
-   → abre o Forms pré-preenchido → você revisa → Enviar
-      → Fluxo padrão (gatilho "nova resposta") → cria o item na lista
-```
-
-Vantagens: sem Premium, sem app no Entra ID, sem SaaS de terceiros, e com um
-checkpoint humano (que casa com a coluna "Conferida?"). O único ponto: o **.docx
-não vai junto** pelo formulário (anexe manualmente se precisar).
+Este é o guia **oficial da equipe** para levar uma carta gerada no ARCA até a
+lista do SharePoint **sem precisar digitar tudo de novo à mão** — e **sem** a
+licença Power Automate Premium.
 
 ---
 
-## As 14 colunas da lista — o que o ARCA preenche
+## 1. Entenda a ideia antes de configurar
 
-| Coluna | ARCA preenche? | Sentinela / observação |
+Hoje, sem integração, o caminho é: gerar a carta no ARCA → abrir o SharePoint →
+digitar número, tema, malha, ofício, processo... um por um. É repetitivo e dá
+erro de digitação.
+
+A ideia deste guia é encurtar isso com **três peças** que conversam entre si:
+
+```
+   ┌─────────┐   link já preenchido   ┌──────────────┐   você confere   ┌──────────────────┐
+   │  ARCA   │ ─────────────────────▶ │ Microsoft    │ ───────────────▶ │ Fluxo (Power     │
+   │(histórico)│  (1 clique no botão) │ Forms        │   e clica Enviar │ Automate gratuito)│
+   └─────────┘                        └──────────────┘                  └────────┬─────────┘
+                                                                                 │ cria o item
+                                                                                 ▼
+                                                                        ┌──────────────────┐
+                                                                        │ Lista SharePoint │
+                                                                        │  (Cartas 2026)   │
+                                                                        └──────────────────┘
+```
+
+Traduzindo:
+
+1. **ARCA** — você clica em **"Registrar via formulário"** no histórico da carta.
+   O ARCA abre um **link do Microsoft Forms com todos os campos já preenchidos**.
+2. **Microsoft Forms** — você só **confere** se está tudo certo e clica em
+   **Enviar**. (É o "checkpoint humano" — nada é gravado sem alguém olhar.)
+3. **Fluxo do Power Automate** — assim que a resposta é enviada, um fluxo
+   **gratuito** pega os dados do formulário e **cria o item** na lista.
+
+**Por que passar pelo Forms em vez de gravar direto?** Porque gravar direto no
+SharePoint a partir de um sistema externo exigiria o conector premium (ou um app
+registrado no Entra ID). O gatilho "nova resposta do Forms" é **gratuito** — por
+isso ele é a ponte.
+
+**Única limitação:** o formulário **não carrega o arquivo .docx**. Se você quiser
+o anexo no item, baixe a carta no ARCA e anexe manualmente no SharePoint depois.
+
+---
+
+## 2. O que você vai precisar configurar (uma vez só)
+
+São 4 etapas, feitas **uma única vez**. Depois disso, o dia a dia é só clicar e
+enviar.
+
+| Etapa | Onde | O que faz | Quem faz |
+|---|---|---|---|
+| A | Microsoft Forms | Criar o formulário com as perguntas | Você |
+| B | Microsoft Forms | Gerar o "link pré-preenchido" (com sentinelas) | Você |
+| C | Render (ARCA) | Colar esse link na configuração do ARCA | Você |
+| D | Power Automate | Criar o fluxo que cria o item na lista | Você |
+
+O ARCA **já está pronto** — ele só precisa do link da Etapa B para funcionar.
+
+---
+
+## 3. As colunas da lista — o que o ARCA já preenche
+
+A lista do SharePoint tem 14 colunas. O ARCA preenche automaticamente as que ele
+conhece no momento em que a carta é gerada; as outras dependem de algo que só
+existe **depois** (protocolar no SEI), então ficam para você preencher na lista.
+
+| # | Coluna na lista | ARCA preenche? | Como o ARCA envia (a "sentinela") |
+|---|---|---|---|
+| 1 | Número da Carta | ✅ | `ZZTITULOZZ` — ex.: `0703/GREG/2026` |
+| 2 | E-mail do Responsável | ✅ | `ZZEMAILZZ` — do "Identifique-se" |
+| 3 | Área do Responsável | ✅ | `ZZAREAZZ` — do "Identifique-se" (lista suspensa) |
+| 4 | Data de envio | ⬜ | *(você preenche na lista após protocolar)* |
+| 5 | Tema | ✅ | `ZZTEMAZZ` |
+| 6 | Órgão | ✅ | `ZZORGAOZZ` — normalmente `ANTT` |
+| 7 | Malha | ✅ | `ZZMALHAZZ` — 1 ou mais siglas, ex.: `RMN, RMP` |
+| 8 | Ofício | ✅ | `ZZOFICIOZZ` — só em carta-resposta; em branco na espontânea |
+| 9 | Dilação? | ⬜ | *(você preenche na lista)* |
+| 10 | Prazo com Dilação | ⬜ | *(você preenche na lista)* |
+| 11 | Forma de Envio | ✅ | `ZZFORMAZZ` — `SEI`, `E-mail` ou `Presencialmente` |
+| 12 | Protocolo | ⬜ | *(você preenche na lista após protocolar)* |
+| 13 | Número do Processo | ✅ | `ZZPROCESSOZZ` |
+| 14 | Assuntos | ✅ | `ZZASSUNTOSZZ` — categoria escolhida no histórico |
+
+> **O que é "sentinela"?** É uma palavra-código temporária (ex.: `ZZTITULOZZ`)
+> que funciona como um "espaço reservado". Quando você monta o link do formulário
+> na Etapa B, digita essas palavras nos campos. Depois, na hora real, o ARCA
+> **troca cada sentinela pelo valor verdadeiro da carta**. Pense nelas como os
+> `{nome}` de um documento-modelo: um marcador que será substituído.
+
+---
+
+## 4. Etapa A — Criar o formulário no Microsoft Forms
+
+1. Acesse **forms.office.com** → **Novo formulário**.
+2. Dê um nome, ex.: *"Registro de Cartas GREG"*.
+3. Crie **uma pergunta para cada coluna que o ARCA preenche** (as 10 da tabela
+   acima marcadas com ✅). Para adicionar, clique em **+ Adicionar novo**.
+
+Use estes tipos de pergunta:
+
+| Pergunta (nomeie assim) | Tipo no Forms |
+|---|---|
+| Número da Carta | Texto |
+| E-mail do Responsável | Texto |
+| Área do Responsável | Texto |
+| Tema | Texto |
+| Órgão | Texto |
+| **Malha** | **Texto** ⚠️ *(leia o aviso abaixo — não use "Escolha")* |
+| Ofício | Texto |
+| Forma de Envio | Escolha → opções: `SEI`, `E-mail`, `Presencialmente` |
+| Número do Processo | Texto |
+| Assuntos | Escolha → as 14 opções (patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, resposta a ofício, outro) |
+
+> ⚠️ **Por que a Malha é "Texto" e não "Escolha"?**
+> No SharePoint, a coluna Malha aceita **várias malhas ao mesmo tempo** (uma carta
+> pode ser RMN **e** RMP). Uma pergunta do tipo "Escolha" no Forms só deixaria
+> marcar **uma** opção. Então a pergunta Malha precisa ser de **Texto**, para
+> receber algo como `RMN, RMP`. Depois, na Etapa D, o fluxo separa esse texto e
+> marca as duas malhas na lista. Não se preocupe: o ARCA sempre manda as siglas
+> exatas (`RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas`).
+
+> 💡 **Dica sobre "Escolha":** nos campos Forma de Envio e Assuntos, o texto das
+> opções precisa ser **idêntico** ao que o ARCA envia (mesmas palavras, mesmos
+> acentos, minúsculas). Ex.: escreva `resposta a ofício`, não `Resposta Ofício`.
+
+---
+
+## 5. Etapa B — Gerar o "link pré-preenchido" (com as sentinelas)
+
+Aqui você cria o molde de link que o ARCA vai usar.
+
+1. No formulário, vá em **Coletar respostas** (botão no topo).
+2. Clique nos **três pontinhos (⋯)** → **Obter URL pré-preenchida**
+   (*Get pre-filled URL*).
+3. Abrirá uma cópia do formulário para você "preencher". **Em cada campo, digite
+   exatamente a sentinela correspondente** (copie e cole da tabela):
+
+   | No campo... | Digite exatamente |
+   |---|---|
+   | Número da Carta | `ZZTITULOZZ` |
+   | E-mail do Responsável | `ZZEMAILZZ` |
+   | Área do Responsável | `ZZAREAZZ` |
+   | Tema | `ZZTEMAZZ` |
+   | Órgão | `ZZORGAOZZ` |
+   | Malha | `ZZMALHAZZ` |
+   | Ofício | `ZZOFICIOZZ` |
+   | Forma de Envio | *(selecione qualquer opção — será trocada)* |
+   | Número do Processo | `ZZPROCESSOZZ` |
+   | Assuntos | *(selecione qualquer opção — será trocada)* |
+
+   > Observação: em campos de **Escolha** (Forma de Envio, Assuntos) o Forms não
+   > deixa digitar texto livre. Tudo bem — selecione qualquer opção só para gerar
+   > o link; o ARCA substitui pelo valor certo mesmo assim, porque a sentinela
+   > entra pela URL.
+
+4. Clique em **Obter link** e **copie a URL inteira**. Ela é longa e tem as
+   sentinelas embutidas, algo como:
+
+   ```
+   https://forms.office.com/Pages/ResponsePage.aspx?id=...&abc123=ZZTITULOZZ&def456=ZZTEMAZZ&...
+   ```
+
+5. **Guarde essa URL** — ela vai para a Etapa C.
+
+> 🔒 **Cuidado ao editar o formulário depois:** se você adicionar, remover ou
+> renomear perguntas, o Forms muda os códigos internos (`abc123=...`) e o link
+> antigo para de preencher. Se isso acontecer, **refaça esta Etapa B** e atualize
+> a configuração da Etapa C.
+
+---
+
+## 6. Etapa C — Colar o link na configuração do ARCA (Render)
+
+1. Acesse o painel do **Render** → serviço do **backend do ARCA**.
+2. Vá em **Environment** (variáveis de ambiente).
+3. Crie/edite a variável:
+
+   | Variável | Valor |
+   |---|---|
+   | `SHAREPOINT_FORMS_URL_TEMPLATE` | a URL inteira que você copiou na Etapa B |
+
+4. Salve. O Render vai reiniciar o serviço automaticamente.
+
+Pronto: no histórico do ARCA, o botão passa a ser **"Registrar via formulário"**.
+
+> ℹ️ Se você **não** definir essa variável, o ARCA usa um link padrão já embutido
+> no código (o do formulário atual da equipe). A variável serve para **trocar** o
+> formulário sem mexer no código — por isso é bom configurá-la com o **seu** link.
+
+---
+
+## 7. Etapa D — Criar o fluxo que cria o item na lista
+
+Este é o "robô" gratuito que, toda vez que alguém envia o formulário, cria a
+linha na lista.
+
+1. Acesse **make.powerautomate.com** → **Criar** → **Fluxo de nuvem
+   automatizado**.
+2. **Gatilho:** procure **Microsoft Forms** e escolha
+   **"Quando uma nova resposta é enviada"** (é o conector **padrão/gratuito**).
+   Selecione o seu formulário.
+3. **Ação 1:** **+ Nova etapa** → **Microsoft Forms** →
+   **"Obter os detalhes da resposta"**. No campo *Id da Resposta*, escolha o
+   conteúdo dinâmico **"ID da resposta"** que veio do gatilho.
+4. **Ação 2:** **+ Nova etapa** → **SharePoint** → **"Criar item"**.
+   - Em *Endereço do site*, escolha o site da lista.
+   - Em *Nome da lista*, escolha a lista das cartas (ex.: **Cartas 2026**).
+   - Vão aparecer os campos da lista. Preencha cada um com a **resposta
+     correspondente** (conteúdo dinâmico da Ação 1):
+
+   | Campo da lista | Preencha com (resposta do Forms) |
+   |---|---|
+   | Número da Carta | Número da Carta |
+   | E-mail do Responsável | E-mail do Responsável |
+   | Área do Responsável | Área do Responsável |
+   | Tema | Tema |
+   | Orgão | Órgão |
+   | **Malha** | **ver seção "Malha" abaixo** ⚠️ |
+   | Ofício | Ofício |
+   | Forma de Envio | Forma de Envio |
+   | Número do Processo | Número do Processo |
+   | Assuntos | Assuntos |
+
+5. **Salve** o fluxo.
+
+Deixe **em branco** (você preenche na lista depois de protocolar no SEI):
+**Data de Envio, Dilação?, Prazo com Dilação, Protocolo** (e "Conferida?", se
+existir).
+
+### Malha — o passo especial (coluna de escolha múltipla)
+
+A coluna Malha aceita **vários valores**, mas o formulário manda um **texto**
+(`RMN, RMP`). É preciso transformar esse texto em uma **lista** antes de gravar.
+Isso se faz com a função `split`:
+
+1. Na ação **Criar item**, encontre o campo **Malha**.
+2. No canto direito do campo, clique no ícone **⇆ "Alternar para inserir toda a
+   matriz"** (*Switch to input entire array*). O campo vira uma caixa única.
+3. Clique nessa caixa → aba **Expressão (fx)** → cole:
+
+   ```
+   split(outputs('Obter_os_detalhes_da_resposta')?['body/IDDAPERGUNTAMALHA'], ', ')
+   ```
+
+   - Troque `IDDAPERGUNTAMALHA` pelo identificador real da pergunta Malha.
+   - **Jeito fácil (sem decorar o id):** apague tudo, digite `split(` na aba
+     Expressão, depois vá em **Conteúdo dinâmico** e clique na resposta
+     **"Malha"** (o editor insere o caminho certo sozinho), e complete com
+     `, ', ')` no final. Vai ficar parecido com o exemplo acima.
+
+**O que essa expressão faz:** `split` corta o texto sempre que encontra `, `
+(vírgula + espaço) — que é exatamente como o ARCA junta as siglas. Então:
+- `RMN, RMP` → vira a lista `["RMN", "RMP"]` (marca as duas malhas)
+- `RMS` → vira `["RMS"]` (marca uma só) — funciona igual.
+
+---
+
+## 8. Como fica o dia a dia (depois de tudo configurado)
+
+1. Gere a carta no ARCA normalmente.
+2. **Antes**, no botão **"Identifique-se"** (canto inferior esquerdo): preencha
+   **nome, e-mail e selecione sua área** na lista. Isso alimenta as colunas
+   E-mail e Área do Responsável.
+3. No **histórico**, na carta desejada, confira o **Assuntos** (escolha a
+   categoria no seletor) e clique em **"Registrar via formulário"**.
+4. Abre o **Forms já preenchido** → **confira** → **Enviar**.
+5. Em segundos, o fluxo cria o item na lista. (Se quiser o `.docx` anexado, baixe
+   a carta e anexe manualmente no item.)
+
+---
+
+## 9. Deu algum campo em branco na lista? Veja aqui
+
+| Campo veio vazio | Causa provável | Como resolver |
 |---|---|---|
-| Número da Carta | ✅ | `ZZTITULOZZ` (0000/GREG/2026) |
-| E-mail do Responsável | ✅ | `ZZEMAILZZ` |
-| Área do Responsável | ✅ | `ZZAREAZZ` |
-| Data de envio | ⬜ | preencher após protocolar no SEI |
-| Tema | ✅ | `ZZTEMAZZ` |
-| Órgão | ✅ | `ZZORGAOZZ` (ANTT) |
-| Malha | ✅ | `ZZMALHAZZ` — coluna de **escolha múltipla**. O ARCA envia uma ou mais siglas separadas por vírgula (ex.: `RMN, RMP`). Ver "Malha (escolha múltipla)" no Passo 4 |
-| Ofício | ✅ | `ZZOFICIOZZ` |
-| Dilação? | ⬜ | Sim/Não — após |
-| Prazo com Dilação | ⬜ | após |
-| Forma de Envio | ✅ | `ZZFORMAZZ` — opções: SEI, E-mail, Presencialmente (padrão SEI) |
-| Protocolo | ⬜ | após |
-| Número do Processo | ✅ | `ZZPROCESSOZZ` |
-| Assuntos | ✅ | `ZZASSUNTOSZZ` — opções: patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, resposta a ofício, outro |
-
-Sentinela extra: `ZZRESPONSAVELZZ` (nome do responsável), `ZZORGAOZZ`.
-
-## Passo 1 — Criar o Microsoft Form
-
-Crie **uma pergunta por coluna que o ARCA preenche** (as demais — Data de envio,
-Dilação?, Prazo com Dilação, Protocolo — ficam de fora do Form; são preenchidas
-na lista após protocolar):
-
-- Número da Carta *(texto)*
-- E-mail do Responsável *(texto)*
-- Área do Responsável *(texto)*
-- Tema *(texto)*
-- Órgão *(texto)*
-- Malha *(**texto** — não use "escolha" aqui; veja a nota abaixo)*
-- Ofício *(texto)*
-- Forma de Envio *(escolha: SEI, E-mail, Presencialmente)*
-- Número do Processo *(texto)*
-- Assuntos *(escolha: as 14 opções acima)*
-
-> Para os campos de **escolha** (Forma de Envio, Assuntos), o valor que o ARCA
-> envia precisa bater **exatamente** com o texto da opção. O ARCA já envia nesse
-> padrão (ex.: Forma de Envio = `SEI`, Assuntos = `resposta a ofício`).
->
-> **Malha é diferente:** no SharePoint a coluna Malha é de **escolha múltipla**,
-> e uma carta pode ter várias malhas (ex.: `RMN, RMP`). Uma pergunta de "escolha"
-> no Forms só aceitaria **um** valor, então a pergunta Malha do formulário deve
-> ser de **texto**. O ARCA envia as siglas separadas por vírgula e o fluxo
-> (Passo 4) divide esse texto e preenche a coluna múltipla. As siglas que o ARCA
-> envia — `RMP, RMC, RMN, RMS, RMO, RSA, Todas as malhas` — batem exatamente com
-> as opções da coluna no SharePoint.
-
-## Passo 2 — Gerar o "URL pré-preenchido" com as SENTINELAS
-
-No Forms: **Coletar respostas → ⋯ → Obter URL pré-preenchida** (Get pre-filled
-URL). Preencha **cada campo com exatamente estas palavras** (copie e cole):
-
-| Campo | Digite exatamente |
-|---|---|
-| Número da Carta | `ZZTITULOZZ` |
-| E-mail do Responsável | `ZZEMAILZZ` |
-| Área do Responsável | `ZZAREAZZ` |
-| Tema | `ZZTEMAZZ` |
-| Órgão | `ZZORGAOZZ` |
-| Malha | `ZZMALHAZZ` |
-| Ofício | `ZZOFICIOZZ` |
-| Forma de Envio | `ZZFORMAZZ` |
-| Número do Processo | `ZZPROCESSOZZ` |
-| Assuntos | `ZZASSUNTOSZZ` |
-
-Clique em **Obter link** e **copie a URL inteira**. Ela terá as sentinelas
-embutidas (ex.: `...&abc123=ZZTITULOZZ&def456=ZZTEMAZZ...`). O ARCA substitui
-cada sentinela pelo valor real da carta, já com a codificação correta.
-
-## Passo 3 — Configurar no ARCA (Render)
-
-No serviço do backend no Render → **Environment**, defina:
-
-| Variável | Valor |
-|---|---|
-| `SHAREPOINT_FORMS_URL_TEMPLATE` | a URL copiada no Passo 2 (com as sentinelas) |
-
-Pronto — o botão do histórico vira **"Registrar via formulário"**. Sem essa
-variável, o botão não aparece (nada quebra).
-
-> Importante: se você **editar as perguntas** do formulário depois, os IDs
-> internos podem mudar; nesse caso, refaça o Passo 2 e atualize a variável.
-
-## Passo 4 — Criar o fluxo padrão (cria o item)
-
-Em **make.powerautomate.com** → **Fluxo de nuvem automatizado**:
-
-1. Gatilho: **Microsoft Forms → "Quando uma nova resposta é enviada"**
-   (conector padrão, sem Premium). Selecione o formulário.
-2. Ação: **Microsoft Forms → "Obter os detalhes da resposta"**.
-3. Ação: **SharePoint → "Criar item"** na lista **Cartas**, mapeando:
-
-| Coluna | Valor |
-|---|---|
-| Número da Carta | resposta: Número da Carta |
-| E-mail do Responsável | resposta: E-mail do Responsável |
-| Área do Responsável | resposta: Área do Responsável |
-| Tema | resposta: Tema |
-| Orgão | resposta: Órgão |
-| Malha | **ver "Malha (escolha múltipla)" abaixo** |
-| Ofício | resposta: Ofício |
-| Forma de Envio | resposta: Forma de Envio |
-| Número do Processo | resposta: Número do Processo |
-| Assuntos | resposta: Assuntos |
-
-Deixe em branco (preenchidos após protocolar no SEI): **Data de Envio, Dilação?,
-Prazo com Dilação, Protocolo**. (E, se existir, "Conferida?".)
-
-### Malha (escolha múltipla) — como preencher a coluna
-
-Como a coluna Malha aceita **vários valores** e o ARCA manda um texto tipo
-`RMN, RMP`, você precisa transformar esse texto em uma **lista** antes de gravar.
-No Power Automate isso é feito com a função `split`:
-
-1. Na ação **Criar item**, localize o campo **Malha**.
-2. Clique no ícone **⇆ (Alternar para inserir toda a matriz / Switch to input
-   entire array)** que aparece no canto direito do campo Malha.
-3. No campo que abrir, cole esta expressão (aba **Expressão / fx**):
-
-   ```
-   split(outputs('Obter_os_detalhes_da_resposta')?['body/<id-da-pergunta-Malha>'], ', ')
-   ```
-
-   - Troque `Obter_os_detalhes_da_resposta` pelo nome exato da sua ação de
-     "Obter os detalhes da resposta" (se você renomeou, use o novo nome).
-   - Troque `<id-da-pergunta-Malha>` pelo identificador da pergunta Malha. Dica:
-     em vez de digitar o id à mão, apague o conteúdo, use **Conteúdo dinâmico**
-     para inserir a resposta **Malha** dentro de um `split(  , ', ')` — o editor
-     preenche o caminho certo. O resultado fica parecido com o exemplo acima.
-
-O separador é **`, `** (vírgula + espaço) — é exatamente assim que o ARCA junta
-as siglas. Assim `RMN, RMP` vira `["RMN","RMP"]` e as duas malhas ficam marcadas
-na coluna. Uma malha só (`RMS`) vira `["RMS"]`, sem problema.
-
-> Se preferir não mexer com `split`: dá para usar a ação **"Selecionar" (Select)**
-> antes do Criar item, mapeando cada item de `split(...)` — mas a expressão acima
-> no próprio campo é o caminho mais curto.
+| **Área do Responsável** | O campo "Área" não foi selecionado no "Identifique-se" quando a carta foi gerada. | Selecione sua área na lista suspensa do "Identifique-se" **antes** de gerar/registrar. |
+| **Malha** | O campo Malha no Forms foi criado como "Escolha", ou faltou o `split` no fluxo. | Malha deve ser **Texto** (Etapa A) e o campo Malha do "Criar item" deve usar o `split` (Etapa D). |
+| **Assuntos** | Em carta espontânea o Assuntos vai **em branco de propósito**. | Escolha a categoria no **seletor de Assuntos dentro do histórico** antes de registrar. |
+| **Ofício** | Em carta espontânea o Ofício fica **em branco de propósito** (só carta-resposta tem ofício). | Comportamento correto — nada a fazer. |
+| **Forma de Envio / Assuntos com valor "errado"** | O texto da opção no Forms não é idêntico ao que o ARCA envia. | Ajuste as opções do Forms para bater **exatamente** (acentos e minúsculas). |
 
 ---
 
-## Resumo do que fica com cada um
+## 10. Resumo de responsabilidades
 
-- **Você (Microsoft):** criar o Form (Passo 1), gerar o URL com sentinelas
-  (Passo 2), criar o fluxo padrão (Passo 4).
-- **Você (Render):** colar a URL na env `SHAREPOINT_FORMS_URL_TEMPLATE` (Passo 3).
-- **ARCA:** já pronto — gera o link pré-preenchido de cada carta.
+- **Você (Microsoft), uma vez:** criar o Form (Etapa A), gerar o link com
+  sentinelas (Etapa B) e criar o fluxo gratuito (Etapa D).
+- **Você (Render), uma vez:** colar o link na variável
+  `SHAREPOINT_FORMS_URL_TEMPLATE` (Etapa C).
+- **ARCA:** já pronto — gera o link pré-preenchido de cada carta e abre para você
+  conferir e enviar.
