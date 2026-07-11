@@ -305,6 +305,31 @@ opções da coluna.
 
 ---
 
+## 6.1. Atualizar em vez de duplicar (quando o número da carta já existe)
+
+Por padrão, cada registro **cria um item novo** — então registrar a mesma carta
+duas vezes gera duplicata. Para, em vez disso, **atualizar o item existente**
+quando o Número da Carta já está na lista, monte um "upsert":
+
+1. **Antes** do "Criar item", adicione **SharePoint → "Obter itens"** (*Get items*):
+   - **Site** e **Lista:** os mesmos.
+   - **Consulta de filtro** (*Filter Query*): `Title eq '@{triggerBody()?['titulo']}'`
+     (procura um item com o mesmo Número da Carta).
+   - **Máximo de itens:** `1`.
+2. Adicione um **Controle → Condição**:
+   - Expressão: `length(body('Obter_itens')?['value'])` **é maior que** `0`.
+   - **Se sim (já existe)** → use **SharePoint → "Atualizar item"** (*Update item*):
+     - **Id:** `first(body('Obter_itens')?['value'])?['ID']`
+     - Mapeie as **mesmas colunas** do "Criar item" (Malha com o `if/replace`, etc.).
+   - **Se não (é novo)** → use o **"Criar item"** normal (Etapas D/E/F).
+
+> Assim, reenviar uma carta corrigida do ARCA **sobrescreve** os dados do item em
+> vez de criar outro. O ARCA já reenvia todos os campos, então a atualização vem
+> completa. (Se quiser, dá para preservar colunas preenchidas à mão — Protocolo,
+> Data de Envio — deixando-as **fora** do "Atualizar item".)
+
+---
+
 ## 7. Etapa E — Anexar o `.docx` (opcional)
 
 O ARCA já manda o arquivo no payload, em **dois campos**: `docxBase64` (o
