@@ -328,6 +328,21 @@ quando o Número da Carta já está na lista, monte um "upsert":
 > completa. (Se quiser, dá para preservar colunas preenchidas à mão — Protocolo,
 > Data de Envio — deixando-as **fora** do "Atualizar item".)
 
+### Modelo de "slots" (pré-criação anual dos itens)
+
+A equipe cria no início do ano ~1500 itens **só com o Título** (`0001/GREG/2026`,
+`0002/GREG/2026`, …) — cada um é um "slot" (carta vazia). Ao registrar pelo ARCA,
+o upsert **encontra o slot daquele número e o preenche** (ramo "Se sim"). É o
+comportamento desejado — não cria item novo para um slot existente.
+
+- **Ramo "Se não" (número sem slot):** por decisão da equipe, mantém-se o **"Criar
+  item"** como rede de segurança (cria o item mesmo sem slot).
+- ⚠️ **O número precisa bater EXATAMENTE**, incluindo **zeros à esquerda**. O ARCA
+  gera o Título com 4 dígitos (`0706/GREG/2026`). Os slots **devem** ter o mesmo
+  formato; se um slot < 1000 foi criado como `706/GREG/2026` (sem zero), o filtro
+  não o encontra e cai no "Criar item" (duplicando). Padronize os slots com zero à
+  esquerda (ou ajuste o ARCA/filtro para casar).
+
 ---
 
 ## 7. Etapa E — Anexar o `.docx` (opcional)
