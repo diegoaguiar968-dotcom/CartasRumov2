@@ -124,16 +124,16 @@ const STEPS_RESPOSTA = [
   { number: 2, key: "oficio", label: "Ofício recebido" },
   { number: 3, key: "dados-resposta", label: "Dados da resposta" },
   { number: 4, key: "minuta", label: "Minuta gerada" },
-  { number: 5, key: "ajuda", label: "Como usar" },
-  { number: 6, key: "historico", label: "Histórico" },
+  { number: 5, key: "historico", label: "Histórico" },
+  { number: 6, key: "ajuda", label: "Como usar" },
 ];
 
 const STEPS_ESPONTANEA = [
   { number: 1, key: "modelos", label: "Modelos" },
   { number: 2, key: "dados-espontanea", label: "Dados da carta" },
   { number: 4, key: "minuta", label: "Minuta gerada" },
-  { number: 5, key: "ajuda", label: "Como usar" },
-  { number: 6, key: "historico", label: "Histórico" },
+  { number: 5, key: "historico", label: "Histórico" },
+  { number: 6, key: "ajuda", label: "Como usar" },
 ];
 
 // Opções da coluna "Assuntos" no SharePoint (devem casar exatamente com a lista)
@@ -271,9 +271,16 @@ export default function App() {
   const [histBusca, setHistBusca] = useState("");
   const [histFiltroResp, setHistFiltroResp] = useState("");
   const [histFiltroMalha, setHistFiltroMalha] = useState("");
-  const [histOpcoes, setHistOpcoes] = useState<{ responsaveis: string[]; malhas: string[] }>({
+  const [histFiltroOrgao, setHistFiltroOrgao] = useState("");
+  const [histFiltroAssunto, setHistFiltroAssunto] = useState("");
+  const [histFiltroForma, setHistFiltroForma] = useState("");
+  const [histFiltroSP, setHistFiltroSP] = useState(""); // "", "sim", "nao"
+  const [histOrdenar, setHistOrdenar] = useState("criado_em");
+  const [histDirecao, setHistDirecao] = useState<"asc" | "desc">("desc");
+  const [histOpcoes, setHistOpcoes] = useState<{ responsaveis: string[]; malhas: string[]; orgaos: string[] }>({
     responsaveis: [],
     malhas: [],
+    orgaos: [],
   });
   const [histDetalhe, setHistDetalhe] = useState<HistoricoEntrada | null>(null);
   const [histMinutaAberta, setHistMinutaAberta] = useState(false);
@@ -589,6 +596,12 @@ export default function App() {
           q: histBusca.trim(),
           responsavel: histFiltroResp,
           malha: histFiltroMalha,
+          orgao: histFiltroOrgao,
+          assuntos: histFiltroAssunto,
+          forma_envio: histFiltroForma,
+          sp: histFiltroSP,
+          ordenar: histOrdenar,
+          direcao: histDirecao,
           limit: HIST_PAGINA,
           offset,
         });
@@ -601,17 +614,24 @@ export default function App() {
         setHistCarregando(false);
       }
     },
-    [histBusca, histFiltroResp, histFiltroMalha, histEntradas.length]
+    [histBusca, histFiltroResp, histFiltroMalha, histFiltroOrgao, histFiltroAssunto, histFiltroForma, histFiltroSP, histOrdenar, histDirecao, histEntradas.length]
   );
 
   useEffect(() => {
     if (activeStepKey !== "historico") return;
     carregarHistorico();
     getHistoricoOpcoes()
-      .then((r) => setHistOpcoes({ responsaveis: r.responsaveis || [], malhas: r.malhas || [] }))
+      .then((r) => setHistOpcoes({ responsaveis: r.responsaveis || [], malhas: r.malhas || [], orgaos: r.orgaos || [] }))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStepKey]);
+
+  // Ordenação e filtros de "escolha" recarregam na hora (a busca livre usa o botão)
+  useEffect(() => {
+    if (activeStepKey !== "historico") return;
+    carregarHistorico();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [histOrdenar, histDirecao, histFiltroResp, histFiltroMalha, histFiltroOrgao, histFiltroAssunto, histFiltroForma, histFiltroSP]);
 
   async function abrirDetalheHistorico(id: string) {
     try {
@@ -1437,70 +1457,109 @@ export default function App() {
             )}
 
             {/* Filtros */}
-            <div className="info-card flex flex-wrap items-end gap-3">
-              <div className="flex-1" style={{ minWidth: "200px" }}>
-                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
-                  Buscar
-                </label>
-                <input
-                  value={histBusca}
-                  onChange={(e) => setHistBusca(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && carregarHistorico()}
-                  placeholder="título, tema, ofício, processo…"
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{
-                    background: "hsl(var(--surface-app))",
-                    border: "1px solid hsl(var(--border))",
-                    color: "hsl(var(--text-primary))",
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
-                  Responsável
-                </label>
-                <select
-                  value={histFiltroResp}
-                  onChange={(e) => setHistFiltroResp(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm"
-                  style={{
-                    background: "hsl(var(--surface-app))",
-                    border: "1px solid hsl(var(--border))",
-                    color: "hsl(var(--text-primary))",
-                    minWidth: "150px",
-                  }}
-                >
-                  <option value="">Todos</option>
-                  {histOpcoes.responsaveis.map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
-                  Malha
-                </label>
-                <select
-                  value={histFiltroMalha}
-                  onChange={(e) => setHistFiltroMalha(e.target.value)}
-                  className="px-3 py-2 rounded-lg text-sm"
-                  style={{
-                    background: "hsl(var(--surface-app))",
-                    border: "1px solid hsl(var(--border))",
-                    color: "hsl(var(--text-primary))",
-                    minWidth: "110px",
-                  }}
-                >
-                  <option value="">Todas</option>
-                  {histOpcoes.malhas.map((m) => (
-                    <option key={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-              <PrimaryButton onClick={() => carregarHistorico()} loading={histCarregando}>
-                <Search className="w-4 h-4" /> Filtrar
-              </PrimaryButton>
-            </div>
+            {(() => {
+              const selStyle = {
+                background: "hsl(var(--surface-app))",
+                border: "1px solid hsl(var(--border))",
+                color: "hsl(var(--text-primary))",
+              };
+              const lblCls = "block text-xs mb-1.5";
+              const lblSt = { color: "hsl(var(--text-muted))" };
+              const temFiltro =
+                histBusca || histFiltroResp || histFiltroMalha || histFiltroOrgao ||
+                histFiltroAssunto || histFiltroForma || histFiltroSP;
+              const limparFiltros = () => {
+                setHistBusca(""); setHistFiltroResp(""); setHistFiltroMalha("");
+                setHistFiltroOrgao(""); setHistFiltroAssunto(""); setHistFiltroForma("");
+                setHistFiltroSP(""); setHistOrdenar("criado_em"); setHistDirecao("desc");
+              };
+              return (
+                <div className="info-card flex flex-col gap-3">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-1" style={{ minWidth: "200px" }}>
+                      <label className={lblCls} style={lblSt}>Buscar</label>
+                      <input
+                        value={histBusca}
+                        onChange={(e) => setHistBusca(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && carregarHistorico()}
+                        placeholder="título, tema, ofício, processo, responsável…"
+                        className="w-full px-3 py-2 rounded-lg text-sm"
+                        style={selStyle}
+                      />
+                    </div>
+                    <PrimaryButton onClick={() => carregarHistorico()} loading={histCarregando}>
+                      <Search className="w-4 h-4" /> Buscar
+                    </PrimaryButton>
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label className={lblCls} style={lblSt}>Responsável</label>
+                      <select value={histFiltroResp} onChange={(e) => setHistFiltroResp(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "150px" }}>
+                        <option value="">Todos</option>
+                        {histOpcoes.responsaveis.map((r) => (<option key={r}>{r}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lblCls} style={lblSt}>Malha</label>
+                      <select value={histFiltroMalha} onChange={(e) => setHistFiltroMalha(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "110px" }}>
+                        <option value="">Todas</option>
+                        {histOpcoes.malhas.map((m) => (<option key={m}>{m}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lblCls} style={lblSt}>Órgão</label>
+                      <select value={histFiltroOrgao} onChange={(e) => setHistFiltroOrgao(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "100px" }}>
+                        <option value="">Todos</option>
+                        {histOpcoes.orgaos.map((o) => (<option key={o}>{o}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lblCls} style={lblSt}>Assunto</label>
+                      <select value={histFiltroAssunto} onChange={(e) => setHistFiltroAssunto(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "140px" }}>
+                        <option value="">Todos</option>
+                        {ASSUNTOS_OPCOES.map((a) => (<option key={a}>{a}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lblCls} style={lblSt}>Forma de envio</label>
+                      <select value={histFiltroForma} onChange={(e) => setHistFiltroForma(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "120px" }}>
+                        <option value="">Todas</option>
+                        {FORMA_OPCOES.map((f) => (<option key={f}>{f}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lblCls} style={lblSt}>SharePoint</label>
+                      <select value={histFiltroSP} onChange={(e) => setHistFiltroSP(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "120px" }}>
+                        <option value="">Todos</option>
+                        <option value="sim">Registrados</option>
+                        <option value="nao">Não registrados</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label className={lblCls} style={lblSt}>Ordenar por</label>
+                      <select value={histOrdenar} onChange={(e) => setHistOrdenar(e.target.value)} className="px-3 py-2 rounded-lg text-sm" style={{ ...selStyle, minWidth: "150px" }}>
+                        <option value="criado_em">Data de criação</option>
+                        <option value="titulo">Número da carta</option>
+                        <option value="responsavel">Responsável</option>
+                        <option value="malha">Malha</option>
+                        <option value="assuntos">Assunto</option>
+                        <option value="tema">Tema</option>
+                      </select>
+                    </div>
+                    <SecondaryButton onClick={() => setHistDirecao((d) => (d === "asc" ? "desc" : "asc"))}>
+                      {histDirecao === "asc" ? "↑ Crescente" : "↓ Decrescente"}
+                    </SecondaryButton>
+                    {temFiltro && (
+                      <SecondaryButton onClick={limparFiltros}>Limpar filtros</SecondaryButton>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Painel de detalhes (quando uma carta está aberta) */}
             {histDetalhe && (

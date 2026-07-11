@@ -55,7 +55,7 @@ async function listarHistorico(req, res, next) {
       return res.json({ success: true, historico: [], total: 0, dbDesativado: true });
     }
 
-    const { q, responsavel, malha, orgao, de, ate } = req.query;
+    const { q, responsavel, malha, orgao, assuntos, forma_envio, sp, de, ate } = req.query;
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
@@ -65,15 +65,27 @@ async function listarHistorico(req, res, next) {
     if (q) {
       params.push(`%${q}%`);
       const i = params.length;
-      cond.push(`(titulo ILIKE $${i} OR tema ILIKE $${i} OR oficio ILIKE $${i} OR processo ILIKE $${i} OR responsavel ILIKE $${i})`);
+      cond.push(`(titulo ILIKE $${i} OR tema ILIKE $${i} OR oficio ILIKE $${i} OR processo ILIKE $${i} OR responsavel ILIKE $${i} OR area ILIKE $${i} OR assuntos ILIKE $${i})`);
     }
-    if (responsavel) { params.push(responsavel); cond.push(`responsavel = $${params.length}`); }
-    if (malha)       { params.push(malha);       cond.push(`malha = $${params.length}`); }
-    if (orgao)       { params.push(orgao);        cond.push(`orgao = $${params.length}`); }
-    if (de)          { params.push(de);           cond.push(`criado_em >= $${params.length}`); }
-    if (ate)         { params.push(ate);          cond.push(`criado_em <= $${params.length}`); }
+    if (responsavel)  { params.push(responsavel);  cond.push(`responsavel = $${params.length}`); }
+    if (malha)        { params.push(malha);        cond.push(`malha = $${params.length}`); }
+    if (orgao)        { params.push(orgao);        cond.push(`orgao = $${params.length}`); }
+    if (assuntos)     { params.push(assuntos);     cond.push(`assuntos = $${params.length}`); }
+    if (forma_envio)  { params.push(forma_envio);  cond.push(`forma_envio = $${params.length}`); }
+    if (sp === 'sim') { cond.push(`sharepoint_em IS NOT NULL`); }
+    if (sp === 'nao') { cond.push(`sharepoint_em IS NULL`); }
+    if (de)           { params.push(de);           cond.push(`criado_em >= $${params.length}`); }
+    if (ate)          { params.push(ate);          cond.push(`criado_em <= $${params.length}`); }
 
     const where = cond.length ? `WHERE ${cond.join(' AND ')}` : '';
+
+    // Ordenação — whitelist de colunas (evita injeção) + direção
+    const COLS_ORDENAR = {
+      criado_em: 'criado_em', titulo: 'titulo', responsavel: 'responsavel',
+      malha: 'malha', tema: 'tema', assuntos: 'assuntos',
+    };
+    const ordenar = COLS_ORDENAR[req.query.ordenar] || 'criado_em';
+    const direcao = String(req.query.direcao || '').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
     const totalRes = await query(`SELECT COUNT(*)::int AS total FROM historico ${where}`, params);
     const total = totalRes.rows[0]?.total || 0;
@@ -84,7 +96,7 @@ async function listarHistorico(req, res, next) {
               tema, orgao, malha, oficio, processo, forma_envio, modelo_id,
               signatario_antt, cargo_antt, sharepoint_em
        FROM historico ${where}
-       ORDER BY criado_em DESC
+       ORDER BY ${ordenar} ${direcao}, criado_em DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
