@@ -113,7 +113,7 @@ Use estes tipos de pergunta:
 | Ofício | Texto |
 | Forma de Envio | Escolha → opções: `SEI`, `E-mail`, `Presencialmente` |
 | Número do Processo | Texto |
-| Assuntos | Escolha → as 14 opções (patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, Resposta Ofício, outro) |
+| Assuntos | Escolha → as 14 opções (patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, Resposta Ofício, Outros) |
 
 > ⚠️ **Por que a Malha é "Texto" e não "Escolha"?**
 > No SharePoint, a coluna Malha aceita **várias malhas ao mesmo tempo** (uma carta

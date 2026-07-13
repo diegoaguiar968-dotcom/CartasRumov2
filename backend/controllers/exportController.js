@@ -92,9 +92,16 @@ function gerarNomeArquivo(numero, assunto, malhaKey) {
   const siglaMalha = siglaMalhaDe(malhaKey);
 
   // O assunto gerado pela IA costuma já terminar com a(s) sigla(s) da entidade
-  // (ex: "Dilação de Prazo - COE - RMP") — evita duplicar no nome do arquivo.
-  const assuntoJaTemSigla = siglaMalha &&
-    assuntoSanitized.toUpperCase().endsWith(siglaMalha.toUpperCase());
+  // (ex: "Dilação de Prazo - COE - RMP" ou "... - RMN e RMP") — evita duplicar
+  // no nome do arquivo, independentemente do separador usado ("e", ",", etc.).
+  const alvo = assuntoSanitized.toUpperCase();
+  let assuntoJaTemSigla = false;
+  if (siglaMalha === 'Todas as malhas') {
+    assuntoJaTemSigla = /TODAS AS MALHAS/.test(alvo);
+  } else if (siglaMalha) {
+    const siglas = siglaMalha.split(',').map(s => s.trim()).filter(Boolean);
+    assuntoJaTemSigla = siglas.every(sig => new RegExp(`\\b${sig}\\b`).test(alvo));
+  }
 
   return siglaMalha && !assuntoJaTemSigla
     ? `${seq} - GREG - ${ano} - ${assuntoSanitized} - ${siglaMalha}.docx`

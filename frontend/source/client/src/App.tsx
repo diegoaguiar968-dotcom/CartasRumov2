@@ -151,7 +151,7 @@ const ASSUNTOS_OPCOES = [
   "fiscalização",
   "RDT e RPMF",
   "Resposta Ofício",
-  "outro",
+  "Outros",
 ];
 
 // Campos do painel de detalhes — mesma ordem e rótulos da lista do SharePoint
