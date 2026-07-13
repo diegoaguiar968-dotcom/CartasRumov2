@@ -37,7 +37,11 @@ tamanho e tipos aceitos (PDF) e como o backend repassa ao fluxo.
 
 ---
 
-## 2. 🟡 .docx "bagunçado" no Word Online (cabeçalho/rodapé)
+## 2. 🟡 .docx no Word Online — cabeçalho/rodapé flutuantes (pendência restante)
+
+> As melhorias de **conteúdo/formatação** (saudação, títulos, negrito da empresa,
+> assinatura uma malha por linha, endereço) já foram feitas (commit `c47e62d`).
+> **O que ainda falta é só o cabeçalho/rodapé** para o Word Online.
 
 **O que é:** a carta gerada abre **perfeita no Word desktop**, mas no **Word
 Online** o **logo do cabeçalho some** (aparece um círculo apagado) e a **faixa do
@@ -81,6 +85,10 @@ mas não resolve o header/footer flutuante.
 ---
 
 ## Concluídas (referência rápida)
+
+- ✅ Formatação do .docx: vírgula na saudação, títulos sem recuo + negrito, nome
+  da empresa em negrito, assinatura uma malha por linha, endereço CEP+cidade na
+  mesma linha (`c47e62d`).
 
 - ✅ Histórico como etapa 5 e "Como usar" como etapa 6 (`49f31a6`).
 - ✅ Filtros e ordenação do histórico (Órgão, Assunto, Forma, status SharePoint;
