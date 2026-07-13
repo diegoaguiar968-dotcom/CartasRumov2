@@ -27,15 +27,39 @@ function resolverConteudo(req, ultimaMinuta) {
 // Infere saudação pelo prefixo "Sr."/"Sra." já atribuído ao signatário,
 // com fallback na terminação do cargo.
 function inferirSaudacao(signatarioAntt, cargoAntt) {
-  if (/^Sra\./i.test((signatarioAntt || '').trim())) return 'Prezada Senhora';
-  if (/^Sr\./i.test((signatarioAntt || '').trim())) return 'Prezado Senhor';
+  if (/^Sra\./i.test((signatarioAntt || '').trim())) return 'Prezada Senhora,';
+  if (/^Sr\./i.test((signatarioAntt || '').trim())) return 'Prezado Senhor,';
 
   // Fallback: primeira palavra do cargo
   const primeiraWordo = (cargoAntt || '').split(/[\s/,-]/)[0].toLowerCase();
   const neutros = /nte$|ste$|ife$|efe$|ista$/;
-  if (primeiraWordo.endsWith('a') && !neutros.test(primeiraWordo)) return 'Prezada Senhora';
+  if (primeiraWordo.endsWith('a') && !neutros.test(primeiraWordo)) return 'Prezada Senhora,';
 
-  return 'Prezado Senhor';
+  return 'Prezado Senhor,';
+}
+
+// ── Helpers para montagem do corpo em XML (títulos, negrito da empresa) ──
+function escXml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// Detecta títulos/subtítulos numerados: "1. ", "1.2 ", "2) ", "I. ", "II – "
+function ehTituloParagrafo(texto) {
+  return /^\s*(?:\d{1,2}(?:\.\d{1,2})*|[IVXLC]{1,5})\s*[.)–-]\s+\S/.test((texto || '').trim());
+}
+
+// Monta os <w:r> de um parágrafo normal, aplicando negrito nos nomes de empresa.
+function runsCorpo(texto, rPrNormal, rPrBold, nomes) {
+  const validos = (nomes || []).filter(Boolean);
+  if (!validos.length) {
+    return `<w:r>${rPrNormal}<w:t xml:space="preserve">${escXml(texto)}</w:t></w:r>`;
+  }
+  const re = new RegExp('(' + validos.map(escRegExp).join('|') + ')', 'g');
+  return texto.split(re).filter((p) => p !== '').map((p) => {
+    const rPr = validos.includes(p) ? rPrBold : rPrNormal;
+    return `<w:r>${rPr}<w:t xml:space="preserve">${escXml(p)}</w:t></w:r>`;
+  }).join('');
 }
 
 function sanitizeNome(s) {
@@ -102,20 +126,47 @@ async function gerarDocxBuffer(dados) {
   if (templatePath && fs.existsSync(templatePath)) {
     // ── Exportação via template DOCX com docxtemplater ──
     const malhasResolvidas = resolverMalhas(malhaKey);
-    const textoMalhas = gerarTextoMalhas(malhasResolvidas);
     const fileContent = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(fileContent);
 
     let docXml = zip.files['word/document.xml'].asText();
 
-    docXml = docXml.replace(
-      /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{conteudo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
-      (match) => {
-        const open  = '<w:p><w:r><w:t xml:space="preserve">{#paragrafos}</w:t></w:r></w:p>';
-        const close = '<w:p><w:r><w:t xml:space="preserve">{/paragrafos}</w:t></w:r></w:p>';
-        return open + match.replace('{conteudo}', '{.}') + close;
+    // Parágrafos do corpo (limpos)
+    const paragrafos = conteudo
+      .split(/\n+/)
+      .map(p => p.replace(/\s{2,}/g, ' ').trim())
+      .filter(Boolean);
+
+    // Estilo do corpo: extrai pPr/rPr do parágrafo modelo {conteudo} (com fallback)
+    const corpoParaRe = /<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{conteudo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/;
+    const corpoModelo = docXml.match(corpoParaRe);
+    let pPrNormal = '<w:pPr><w:pStyle w:val="Ttulo"/><w:spacing w:before="120" w:after="240"/><w:ind w:right="125" w:firstLine="1304"/><w:jc w:val="both"/><w:rPr><w:b w:val="0"/><w:bCs w:val="0"/></w:rPr></w:pPr>';
+    let rPrNormal = '<w:rPr><w:b w:val="0"/><w:bCs w:val="0"/></w:rPr>';
+    if (corpoModelo) {
+      const pm = corpoModelo[0].match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+      if (pm) pPrNormal = pm[0];
+      const rm = corpoModelo[0].match(/<w:r\b[^>]*>\s*(<w:rPr>[\s\S]*?<\/w:rPr>)/);
+      if (rm) rPrNormal = rm[1];
+    }
+    const rPrBold = '<w:rPr><w:b/><w:bCs/></w:rPr>';
+    // pPr de título: sem recuo de 1ª linha, alinhado à esquerda, marca em negrito
+    const pPrTitulo = pPrNormal
+      .replace(/\s*w:firstLine="\d+"/, '')
+      .replace(/\s*w:hanging="\d+"/, '')
+      .replace(/<w:jc\s+w:val="[^"]*"\s*\/>/, '<w:jc w:val="left"/>')
+      .replace(/<w:rPr>[\s\S]*?<\/w:rPr>/, rPrBold);
+
+    // #3 títulos sem recuo/negrito, #4 nome da empresa em negrito no corpo
+    const nomesEmpresa = malhasResolvidas.map(m => m.nome).filter(Boolean);
+    const corpoXml = paragrafos.map((texto) => {
+      if (ehTituloParagrafo(texto)) {
+        return `<w:p>${pPrTitulo}<w:r>${rPrBold}<w:t xml:space="preserve">${escXml(texto)}</w:t></w:r></w:p>`;
       }
-    );
+      return `<w:p>${pPrNormal}${runsCorpo(texto, rPrNormal, rPrBold, nomesEmpresa)}</w:p>`;
+    }).join('');
+
+    // Substitui o parágrafo {conteudo} por um placeholder de XML bruto ({@corpoXml})
+    docXml = docXml.replace(corpoParaRe, '<w:p><w:r><w:t xml:space="preserve">{@corpoXml}</w:t></w:r></w:p>');
 
     docXml = docXml.replace(
       /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{processo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
@@ -135,18 +186,19 @@ async function gerarDocxBuffer(dados) {
       }
     );
 
-    // A saudação já é um placeholder {saudacao} no próprio template
-    // (baked em 3-modelo-anexos.docx) — o docxtemplater a preenche
-    // nativamente no render(), sem substituição frágil de runs.
+    // #2 assinatura: uma malha por linha (loop de parágrafo sobre {regulada})
+    docXml = docXml.replace(
+      /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{regulada\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
+      (match) => {
+        const open  = '<w:p><w:r><w:t xml:space="preserve">{#reguladas}</w:t></w:r></w:p>';
+        const close = '<w:p><w:r><w:t xml:space="preserve">{/reguladas}</w:t></w:r></w:p>';
+        return open + match.replace('{regulada}', '{.}') + close;
+      }
+    );
 
     zip.file('word/document.xml', docXml);
 
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: false });
-
-    const paragrafos = conteudo
-      .split(/\n+/)
-      .map(p => p.replace(/\s{2,}/g, ' ').trim())
-      .filter(Boolean);
 
     const saudacao = inferirSaudacao(signatarioAntt, cargoAntt);
 
@@ -159,8 +211,8 @@ async function gerarDocxBuffer(dados) {
       processoItems:   processo  ? [{ processo  }] : [],
       referenciaItems: referencia ? [{ referencia }] : [],
       assunto,
-      paragrafos,
-      regulada: textoMalhas?.nomesResumidos || '',
+      corpoXml,
+      reguladas: nomesEmpresa,
     });
 
     const buffer = doc.getZip().generate({ type: 'nodebuffer' });
