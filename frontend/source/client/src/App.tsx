@@ -33,6 +33,7 @@ import {
   getTemplates,
   uploadOficio,
   uploadComplementar,
+  removeComplementar,
   gerarMinuta,
   gerarCartaEspontanea,
   refinarMinuta,
@@ -52,6 +53,7 @@ import {
   getAnttServidores,
   type Template,
   type Briefing,
+  type DocumentoComplementar,
   type MinutaMeta,
   type AiFeedback,
   type HistoricoEntrada,
@@ -119,6 +121,28 @@ function keysParaMalhaStr(keys: string[]): string {
 
 type FlowType = "resposta" | "espontanea" | null;
 
+/**
+ * Ponto a responder já no formato editável da tela. O `id` mantém a identidade
+ * do card mesmo quando pontos são excluídos ou adicionados no meio da lista.
+ */
+interface PontoEditavel {
+  id: number;
+  ponto: string;
+  resposta: string;
+}
+
+let seqPonto = 0;
+const novoPontoId = () => ++seqPonto;
+
+/** Converte os pontos do briefing (objeto novo ou string antiga) para a tela. */
+function pontosDoBriefing(briefing: Briefing | null): PontoEditavel[] {
+  return (briefing?.pontos || []).map((p) => {
+    const texto = typeof p === "string" ? p : p?.ponto || "";
+    const sugestao = typeof p === "string" ? "" : p?.sugestao || "";
+    return { id: novoPontoId(), ponto: texto, resposta: sugestao };
+  });
+}
+
 const STEPS_RESPOSTA = [
   { number: 1, key: "modelos", label: "Modelos" },
   { number: 2, key: "oficio", label: "Ofício recebido" },
@@ -179,6 +203,10 @@ export default function App() {
     (msg: string) => toast({ variant: "destructive", title: "Ops", description: msg }),
     [toast]
   );
+  const notificar = useCallback(
+    (titulo: string, msg?: string) => toast({ title: titulo, description: msg }),
+    [toast]
+  );
 
   // Modal de confirmação (substitui window.confirm, no estilo do app)
   const [confirmState, setConfirmState] = useState<{
@@ -226,7 +254,13 @@ export default function App() {
   const [respDestArea, setRespDestArea] = useState("");
   const [respMatch, setRespMatch] = useState<AnttServidor | null>(null);
   const [respMatchDispensado, setRespMatchDispensado] = useState(false);
-  const [pontosRespostas, setPontosRespostas] = useState<Record<number, string>>({});
+  // Pontos com identidade própria: podem ser editados, excluídos e adicionados
+  const [pontos, setPontos] = useState<PontoEditavel[]>([]);
+
+  // ── Documentos complementares do fluxo resposta ──
+  const [docsResposta, setDocsResposta] = useState<DocumentoComplementar[]>([]);
+  const [enviandoDocsResposta, setEnviandoDocsResposta] = useState(false);
+  const docsRespostaInputRef = useRef<HTMLInputElement>(null);
 
   // ── Etapa 2b (espontânea): dados ──
   const [destNome, setDestNome] = useState("");
@@ -372,9 +406,10 @@ export default function App() {
     try {
       const r = await uploadOficio(file);
       setBriefing(r.briefing);
-      const inicial: Record<number, string> = {};
-      r.briefing.pontos?.forEach((_, i) => (inicial[i] = ""));
-      setPontosRespostas(inicial);
+      // Cada ponto já chega com a sugestão de direção preenchida pela IA
+      setPontos(pontosDoBriefing(r.briefing));
+      // O backend descarta os complementares ao receber um novo ofício
+      setDocsResposta([]);
 
       // Pré-preenche o destinatário com a extração e tenta casar com a base ANTT
       const { nome, cargo } = parsearSignatario(r.briefing.signatarioAntt);
@@ -393,14 +428,68 @@ export default function App() {
     }
   }
 
+  // ── Edição dos pontos a responder ──
+  function atualizarPonto(id: number, campo: "ponto" | "resposta", valor: string) {
+    setPontos((lista) => lista.map((p) => (p.id === id ? { ...p, [campo]: valor } : p)));
+  }
+
+  function excluirPonto(id: number) {
+    setPontos((lista) => lista.filter((p) => p.id !== id));
+  }
+
+  function adicionarPonto() {
+    setPontos((lista) => [...lista, { id: novoPontoId(), ponto: "", resposta: "" }]);
+  }
+
+  // ── Documentos complementares (fluxo resposta) ──
+  async function handleUploadDocsResposta(files: File[]) {
+    if (!files.length) return;
+    setEnviandoDocsResposta(true);
+    try {
+      const r = await uploadComplementar(files);
+      const novos = r.documentos || [];
+      setDocsResposta((atuais) => [...atuais, ...novos]);
+
+      const semLeitura = novos.filter((d) => !d.extraido);
+      if (semLeitura.length) {
+        notificar(
+          "Documento anexado sem leitura de conteúdo",
+          `${semLeitura.map((d) => d.nome).join(", ")} — a IA saberá que o documento acompanha a carta, mas não conseguirá ler seu conteúdo.`
+        );
+      }
+    } catch (e: any) {
+      notificarErro(e.message || "Erro ao enviar documentos.");
+    } finally {
+      setEnviandoDocsResposta(false);
+      if (docsRespostaInputRef.current) docsRespostaInputRef.current.value = "";
+    }
+  }
+
+  async function handleRemoverDocResposta(id: number) {
+    setDocsResposta((atuais) => atuais.filter((d) => d.id !== id));
+    try {
+      await removeComplementar(id);
+    } catch {
+      // A remoção local já aconteceu; o documento sai do contexto na próxima geração
+    }
+  }
+
   async function handleGerarMinutaResposta() {
     if (!briefing) return;
     setGerandoMinuta(true);
     try {
-      const pontosRespondidos = briefing.pontos.map((ponto, i) => ({
-        ponto,
-        resposta: pontosRespostas[i] || "",
-      }));
+      const pontosRespondidos = pontos
+        .filter((p) => p.ponto.trim())
+        .map((p) => ({ ponto: p.ponto.trim(), resposta: p.resposta.trim() }));
+
+      // Pontos sem descrição não vão para a IA — avisa em vez de sumir calado
+      const ignorados = pontos.filter((p) => !p.ponto.trim() && p.resposta.trim()).length;
+      if (ignorados) {
+        notificar(
+          `${ignorados} ponto(s) sem descrição`,
+          "A orientação foi preenchida, mas o ponto ficou em branco — esses itens não foram enviados à IA."
+        );
+      }
       // Usa o destinatário (possivelmente corrigido) na geração
       const briefingFinal: Briefing = {
         ...briefing,
@@ -1067,16 +1156,127 @@ export default function App() {
               </div>
             </div>
 
-            {briefing.pontos.map((ponto, i) => (
-              <div key={i} className="info-card">
-                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
-                  Ponto {i + 1}
-                </label>
-                <p className="text-sm text-white mb-2">{ponto}</p>
+            {/* Documentos complementares — contexto extra para a IA */}
+            <div className="info-card">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm text-white font-medium">Documentos complementares (opcional)</p>
+                  <p style={{ color: "hsl(var(--text-muted))", fontSize: "12px" }}>
+                    Nota técnica, planilhas, anexos — qualquer formato. A IA usa como contexto da resposta.
+                  </p>
+                </div>
+                <input
+                  ref={docsRespostaInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length) handleUploadDocsResposta(files);
+                  }}
+                />
+                <SecondaryButton
+                  onClick={() => docsRespostaInputRef.current?.click()}
+                  disabled={enviandoDocsResposta}
+                >
+                  {enviandoDocsResposta ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Paperclip className="w-4 h-4" /> Anexar documentos
+                    </>
+                  )}
+                </SecondaryButton>
+              </div>
+
+              {docsResposta.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {docsResposta.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                      style={{ background: "hsl(var(--surface-app))", border: "1px solid hsl(var(--border))" }}
+                    >
+                      <FileText className="w-4 h-4 shrink-0" style={{ color: "hsl(var(--text-muted))" }} />
+                      <span className="text-sm text-white truncate flex-1">{d.nome}</span>
+                      {!d.extraido && (
+                        <span
+                          title={d.motivo || "Conteúdo não legível automaticamente"}
+                          className="text-[11px] px-2 py-0.5 rounded shrink-0"
+                          style={{ background: "hsl(var(--surface-raised))", color: "hsl(var(--text-muted))" }}
+                        >
+                          sem leitura
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleRemoverDocResposta(d.id)}
+                        title="Remover documento"
+                        className="p-1 rounded hover:opacity-80 shrink-0"
+                        style={{ color: "hsl(var(--text-muted))" }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pontos a responder — editáveis, removíveis e adicionáveis */}
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-sm text-white font-medium">
+                Pontos a responder{pontos.length ? ` (${pontos.length})` : ""}
+              </p>
+              <span style={{ color: "hsl(var(--text-muted))", fontSize: "12px" }}>
+                Revise, ajuste ou remova o que não se aplica
+              </span>
+            </div>
+
+            {pontos.length === 0 && (
+              <div className="info-card text-center">
+                <p style={{ color: "hsl(var(--text-muted))", fontSize: "13px" }}>
+                  Nenhum ponto na lista. Adicione ao menos um ponto para orientar a resposta.
+                </p>
+              </div>
+            )}
+
+            {pontos.map((p, i) => (
+              <div key={p.id} className="info-card">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <label className="block text-xs" style={{ color: "hsl(var(--text-muted))" }}>
+                    Ponto {i + 1}
+                  </label>
+                  <button
+                    onClick={() => excluirPonto(p.id)}
+                    title="Excluir este ponto"
+                    className="p-1 rounded hover:opacity-80"
+                    style={{ color: "hsl(var(--text-muted))" }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <textarea
-                  value={pontosRespostas[i] || ""}
-                  onChange={(e) => setPontosRespostas((p) => ({ ...p, [i]: e.target.value }))}
-                  placeholder="Digite a resposta para este ponto..."
+                  value={p.ponto}
+                  onChange={(e) => atualizarPonto(p.id, "ponto", e.target.value)}
+                  placeholder="O que a ANTT está solicitando neste ponto..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg text-sm resize-y mb-3"
+                  style={{
+                    background: "hsl(var(--surface-app))",
+                    border: "1px solid hsl(var(--border))",
+                    color: "hsl(var(--text-primary))",
+                  }}
+                />
+                <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
+                  Orientação para a resposta{" "}
+                  <span style={{ opacity: 0.75 }}>· sugestão da IA, ajuste como quiser</span>
+                </label>
+                <textarea
+                  value={p.resposta}
+                  onChange={(e) => atualizarPonto(p.id, "resposta", e.target.value)}
+                  placeholder="Em uma ou duas frases, o sentido que a resposta deve seguir..."
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg text-sm resize-y"
                   style={{
@@ -1087,6 +1287,10 @@ export default function App() {
                 />
               </div>
             ))}
+
+            <SecondaryButton onClick={adicionarPonto}>
+              <PencilLine className="w-4 h-4" /> Adicionar ponto
+            </SecondaryButton>
 
             <div className="flex justify-between pt-2">
               <SecondaryButton onClick={() => goTo("oficio")}>
@@ -1226,23 +1430,29 @@ export default function App() {
                 <p style={{ color: "hsl(var(--text-muted))", fontSize: "12px" }}>
                   Nota técnica, resolução ou qualquer doc que dê contexto adicional à IA
                 </p>
+                {docsRelacionados.length > 0 && (
+                  <p className="text-xs text-white mt-1">{docsRelacionados.join(", ")}</p>
+                )}
               </div>
               <input
                 ref={docsInputRef}
                 type="file"
-                accept=".pdf"
+                multiple
                 className="hidden"
                 onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (f) {
-                    await uploadComplementar(f);
-                    setDocsRelacionados((d) => [...d, f.name]);
-                  }
+                  const files = Array.from(e.target.files || []);
                   e.target.value = "";
+                  if (!files.length) return;
+                  try {
+                    await uploadComplementar(files);
+                    setDocsRelacionados((d) => [...d, ...files.map((f) => f.name)]);
+                  } catch (err: any) {
+                    notificarErro(err.message || "Erro ao enviar documentos.");
+                  }
                 }}
               />
               <SecondaryButton onClick={() => docsInputRef.current?.click()}>
-                <Paperclip className="w-4 h-4" /> Adicionar PDF
+                <Paperclip className="w-4 h-4" /> Anexar documentos
               </SecondaryButton>
             </div>
 

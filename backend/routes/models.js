@@ -1,6 +1,6 @@
 // routes/models.js
 const router = require('express').Router();
-const upload = require('../middleware/upload');
+const { uploadPdf: upload } = require('../middleware/upload');
 const { uploadModelos, analisarModelos, listarTemplates } = require('../controllers/modelsController');
 
 router.get('/templates', listarTemplates);

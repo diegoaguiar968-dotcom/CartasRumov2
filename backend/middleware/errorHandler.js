@@ -9,9 +9,15 @@ function errorHandler(err, req, res, _next) {
 
   // Erros de upload (multer)
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ success: false, message: 'Arquivo muito grande. Limite: 15 MB.' });
+    return res.status(413).json({ success: false, message: 'Arquivo muito grande. Limite: 25 MB.' });
   }
-  if (err.message === 'Apenas arquivos PDF são permitidos') {
+  if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(413).json({
+      success: false,
+      message: 'Muitos arquivos enviados de uma vez. Envie até 10 por vez.',
+    });
+  }
+  if (err.message === 'Apenas arquivos PDF são permitidos' || /não são permitidos por segurança/.test(err.message)) {
     return res.status(415).json({ success: false, message: err.message });
   }
 

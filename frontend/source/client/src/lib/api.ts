@@ -52,6 +52,12 @@ export async function uploadModelos(files: File[]) {
 }
 
 // ── Ofício ──
+/** Ponto a responder, com a sugestão de direção gerada pela IA. */
+export interface PontoOficio {
+  ponto: string;
+  sugestao: string;
+}
+
 export interface Briefing {
   numero: string;
   processo: string;
@@ -63,8 +69,17 @@ export interface Briefing {
   fundamentoLegal: string;
   malha: string;
   assunto: string;
-  pontos: string[];
+  /** Ofícios processados antes da sugestão existir devolvem `string[]`. */
+  pontos: (PontoOficio | string)[];
   documentosRequisitados: string[];
+}
+
+export interface DocumentoComplementar {
+  id: number;
+  nome: string;
+  formato: string;
+  extraido: boolean;
+  motivo?: string;
 }
 
 export async function uploadOficio(file: File): Promise<{ success: boolean; briefing: Briefing }> {
@@ -74,10 +89,20 @@ export async function uploadOficio(file: File): Promise<{ success: boolean; brie
   return res.json();
 }
 
-export async function uploadComplementar(file: File) {
+/** Envia um ou vários documentos complementares (qualquer formato). */
+export async function uploadComplementar(
+  files: File | File[]
+): Promise<{ success: boolean; documentos: DocumentoComplementar[] }> {
   const form = new FormData();
-  form.append("file", file);
+  for (const f of Array.isArray(files) ? files : [files]) {
+    form.append("files", f);
+  }
   const res = await req("/api/oficio/complementar", { method: "POST", body: form });
+  return res.json();
+}
+
+export async function removeComplementar(id: number): Promise<{ success: boolean }> {
+  const res = await req(`/api/oficio/complementar/${id}`, { method: "DELETE" });
   return res.json();
 }
 

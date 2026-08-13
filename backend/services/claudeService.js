@@ -78,6 +78,35 @@ async function callClaude(messages, systemPrompt, maxTokens = 8000) {
  * @param {string} textoOficio - Texto extraído do PDF
  * @returns {Promise<Object>} - Briefing estruturado
  */
+/**
+ * Normaliza a lista de pontos para o formato `{ ponto, sugestao }`.
+ * Aceita o formato antigo (array de strings), usado por ofícios já processados
+ * e por entradas gravadas no histórico antes da sugestão existir.
+ */
+function normalizarPontos(pontos) {
+  if (!Array.isArray(pontos)) return [];
+  return pontos
+    .map((p) => {
+      if (typeof p === 'string') return { ponto: p.trim(), sugestao: '' };
+      if (p && typeof p === 'object') {
+        return {
+          ponto: String(p.ponto ?? p.pergunta ?? p.texto ?? '').trim(),
+          sugestao: String(p.sugestao ?? p.respostaSugerida ?? p.resposta ?? '').trim(),
+        };
+      }
+      return { ponto: String(p ?? '').trim(), sugestao: '' };
+    })
+    .filter((p) => p.ponto);
+}
+
+/** Aplica a normalização dos pontos sobre um briefing recém-parseado. */
+function normalizarBriefing(briefing) {
+  if (briefing && typeof briefing === 'object') {
+    briefing.pontos = normalizarPontos(briefing.pontos);
+  }
+  return briefing;
+}
+
 async function extrairBriefingOficio(textoOficio) {
   const systemPrompt = `Você é um especialista em análise de documentos regulatórios do setor ferroviário brasileiro.
 Sua tarefa é extrair informações estruturadas de ofícios da ANTT (Agência Nacional de Transportes Terrestres).
@@ -103,8 +132,8 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "malha": "quais entidades do grupo Rumo são destinatárias ou mencionadas no ofício — responda com uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte' para múltiplas. Use 'não identificada' se nenhuma for identificada.",
   "assunto": "assunto conciso (máx 80 chars) no formato: [Tipo de Ação] - [Programa/Referência] - [Entidade(s)]. Exemplos: 'Dilação de Prazo - COE - RMP', 'Envio de Documentos - PSI - RMP', 'Informações sobre Acidente km 123'. Sem ponto final.",
   "pontos": [
-    "ponto 1 a ser respondido",
-    "ponto 2 a ser respondido"
+    { "ponto": "o que a ANTT solicita neste item, de forma objetiva", "sugestao": "direção que a resposta deve seguir" },
+    { "ponto": "...", "sugestao": "..." }
   ],
   "documentosRequisitados": [
     "documento 1 solicitado"
@@ -116,19 +145,23 @@ ATENÇÃO — distinção obrigatória entre 'numero' e 'processo':
 - 'processo': é o número do processo administrativo/SEI vinculado (ex: "50505.018666/2026-59"), que segue o padrão NNNNN.NNNNNN/AAAA-NN. São sempre valores distintos.
 
 Para o campo 'malha': procure referências a contratos de concessão, trechos ferroviários, estados atendidos ou razão social. Pode haver múltiplas entidades — separe por vírgula (ex: 'paulista,norte'). Chaves: 'rumo' (RUMO S.A. holding), 'norte', 'paulista', 'oeste', 'sul', 'central'.
-Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.`;
+Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.
+
+Sobre o campo 'pontos' — separe cada solicitação distinta em seu próprio item (nada de agrupar duas exigências em um ponto só). Para cada ponto:
+- 'ponto': o que está sendo pedido, em uma frase clara e específica.
+- 'sugestao': em 1 ou 2 frases curtas, o ENCAMINHAMENTO que a resposta deve seguir (ex.: "Confirmar o envio da lista atualizada e informar que os dados foram apurados em campo."). É apenas a direção para orientar quem vai redigir — NÃO escreva a resposta final, não use linguagem de carta nem invente dados, números, datas ou conclusões que não estejam no ofício.`;
 
   const rawResponse = await callClaude(
     [{ role: 'user', content: userMessage }],
     systemPrompt,
-    1500
+    2500
   );
 
   // Limpar possíveis resíduos de markdown
   const cleaned = rawResponse.replace(/```json|```/gi, '').trim();
 
   try {
-    return JSON.parse(cleaned);
+    return normalizarBriefing(JSON.parse(cleaned));
   } catch (parseError) {
     console.error('[Claude] Falha ao parsear JSON do briefing:', cleaned.substring(0, 300));
     // Retorna um briefing de fallback para não travar o frontend
@@ -142,7 +175,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
       natureza: 'Requerimento de Informação',
       fundamentoLegal: 'Não citado',
       malha: 'não identificada',
-      pontos: ['Não foi possível extrair os pontos automaticamente. Por favor, revise o PDF.'],
+      pontos: [{ ponto: 'Não foi possível extrair os pontos automaticamente. Por favor, revise o PDF.', sugestao: '' }],
       documentosRequisitados: [],
     };
   }
@@ -180,15 +213,21 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
   "malha": "quais entidades do grupo Rumo são destinatárias — uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte'. Use 'não identificada' se nenhuma identificada.",
   "assunto": "assunto conciso (máx 80 chars) no formato: [Tipo de Ação] - [Programa/Referência] - [Entidade(s)]. Exemplos: 'Dilação de Prazo - COE - RMP', 'Envio de Documentos - PSI - RMP', 'Informações sobre Acidente km 123'. Sem ponto final.",
-  "pontos": ["ponto 1 a ser respondido", "ponto 2 a ser respondido"],
+  "pontos": [
+    { "ponto": "o que a ANTT solicita neste item, de forma objetiva", "sugestao": "direção que a resposta deve seguir" }
+  ],
   "documentosRequisitados": ["documento 1 solicitado"]
 }
 
-Para 'malha': procure referências a contratos de concessão, trechos ferroviários ou razão social. Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.`;
+Para 'malha': procure referências a contratos de concessão, trechos ferroviários ou razão social. Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.
+
+Sobre o campo 'pontos' — separe cada solicitação distinta em seu próprio item (nada de agrupar duas exigências em um ponto só). Para cada ponto:
+- 'ponto': o que está sendo pedido, em uma frase clara e específica.
+- 'sugestao': em 1 ou 2 frases curtas, o ENCAMINHAMENTO que a resposta deve seguir (ex.: "Confirmar o envio da lista atualizada e informar que os dados foram apurados em campo."). É apenas a direção para orientar quem vai redigir — NÃO escreva a resposta final, não use linguagem de carta nem invente dados, números, datas ou conclusões que não estejam no ofício.`;
 
   const body = {
     model: MODEL,
-    max_tokens: 1500,
+    max_tokens: 2500,
     system: systemPrompt,
     messages: [{
       role: 'user',
@@ -227,7 +266,7 @@ Para 'malha': procure referências a contratos de concessão, trechos ferroviár
 
       const cleaned = textBlock.text.replace(/```json|```/gi, '').trim();
       try {
-        return JSON.parse(cleaned);
+        return normalizarBriefing(JSON.parse(cleaned));
       } catch {
         console.error('[Claude/PDF] Falha ao parsear JSON:', cleaned.substring(0, 200));
         return {
@@ -236,7 +275,7 @@ Para 'malha': procure referências a contratos de concessão, trechos ferroviár
           area: 'Não identificada', prazo: 'Não especificado',
           natureza: 'Requerimento de Informação', fundamentoLegal: 'Não citado',
           malha: 'não identificada',
-          pontos: ['Não foi possível extrair os pontos automaticamente. Por favor, revise o PDF.'],
+          pontos: [{ ponto: 'Não foi possível extrair os pontos automaticamente. Por favor, revise o PDF.', sugestao: '' }],
           documentosRequisitados: [],
         };
       }
@@ -330,7 +369,7 @@ NÃO inclua: cabeçalho da carta, número do ofício, data, destinatário, sauda
 Comece diretamente com o primeiro parágrafo de resposta.` : ''}`;
 
   const pontosFormatados = pontosRespondidos
-    ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   RESPOSTA DO USUÁRIO: ${item.resposta || '(não informado)'}`)
+    ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   ORIENTAÇÃO PARA A RESPOSTA: ${item.resposta || '(não informado)'}`)
     .join('\n\n') || 'Nenhum ponto respondido fornecido.';
 
   const dataHoje = new Date().toLocaleDateString('pt-BR', {
@@ -354,12 +393,19 @@ Fundamento Legal: ${briefing?.fundamentoLegal || 'Não citado'}
 ${malhaIdentificada}
 
 ═══════════ PONTOS A RESPONDER ═══════════
+A "ORIENTAÇÃO PARA A RESPOSTA" indica o SENTIDO que a resposta deve seguir — é um rascunho de direção, não o texto final.
+Desenvolva-a em linguagem formal de carta, com a profundidade adequada, sem copiá-la literalmente e sem acrescentar dados, números ou compromissos que não estejam informados.
+
 ${pontosFormatados}
 ${contextosAdicionais?.length ? `
 ═══════════ DOCUMENTOS COMPLEMENTARES (apenas contexto) ═══════════
 Os documentos abaixo acompanham o ofício. Use-os para enriquecer o contexto e fundamentar afirmações quando relevante. NÃO responda ponto a ponto nem liste seus itens individualmente.
 
-${contextosAdicionais.map(d => `[${d.nome}]\n${d.texto}`).join('\n\n---\n\n')}` : ''}
+${contextosAdicionais.map(d => (
+  d.texto
+    ? `[${d.nome}]\n${d.texto}`
+    : `[${d.nome}] — documento anexado à carta; conteúdo não legível automaticamente (${d.motivo || 'formato sem extração de texto'}). Considere apenas que este documento acompanha a resposta.`
+)).join('\n\n---\n\n')}` : ''}
 
 Data de emissão: São Paulo, ${dataHoje}
 

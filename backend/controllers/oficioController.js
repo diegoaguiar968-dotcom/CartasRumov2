@@ -4,8 +4,16 @@
  */
 
 const { extrairTextoPDF, textoEhLegivel } = require('../services/pdfService');
+const { extrairTextoArquivo } = require('../services/fileTextService');
 const { extrairBriefingOficio, extrairBriefingOficioPDF } = require('../services/claudeService');
 const { getSession } = require('../services/store');
+
+// IDs únicos mesmo para arquivos enviados no mesmo milissegundo
+let contadorId = 0;
+function proximoId() {
+  contadorId += 1;
+  return Date.now() * 1000 + (contadorId % 1000);
+}
 
 async function uploadOficio(req, res, next) {
   try {
@@ -58,23 +66,53 @@ async function uploadOficio(req, res, next) {
   }
 }
 
+/**
+ * Recebe um ou vários documentos complementares, em qualquer formato.
+ * Aceita os campos `files` (novo, múltiplo) e `file` (antigo, único).
+ * Formatos sem leitura automática são registrados apenas pelo nome — a IA
+ * fica sabendo que o documento acompanha o ofício.
+ */
 async function uploadComplementar(req, res, next) {
   try {
-    if (!req.file) {
+    const enviados = [
+      ...(req.files?.files || []),
+      ...(req.files?.file || []),
+      ...(req.file ? [req.file] : []),
+    ];
+
+    if (!enviados.length) {
       return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado.' });
     }
 
     const session = getSession(req.sessionId);
-    const texto = await extrairTextoPDF(req.file.path);
-    const doc = {
-      id: Date.now(),
-      nome: req.file.originalname,
-      texto: texto.substring(0, 8000),
-    };
-    session.documentosComplementares.push(doc);
+    const documentos = [];
 
-    console.log(`[Complementar] Documento adicionado: ${doc.nome} (${session.documentosComplementares.length} total)`);
-    res.json({ success: true, id: doc.id, nome: doc.nome });
+    for (const arquivo of enviados) {
+      const resultado = await extrairTextoArquivo(arquivo.path, arquivo.originalname);
+      const doc = {
+        id: proximoId(),
+        nome: arquivo.originalname,
+        texto: resultado.texto,
+        formato: resultado.formato,
+        extraido: resultado.extraido,
+        motivo: resultado.motivo,
+      };
+      session.documentosComplementares.push(doc);
+      documentos.push({
+        id: doc.id,
+        nome: doc.nome,
+        formato: doc.formato,
+        extraido: doc.extraido,
+        motivo: doc.motivo,
+      });
+      console.log(
+        `[Complementar] ${doc.nome} (${doc.formato}) — ${doc.extraido ? `${doc.texto.length} chars` : 'sem leitura de conteúdo'}`
+      );
+    }
+
+    console.log(`[Complementar] ${session.documentosComplementares.length} documento(s) na sessão.`);
+    // `id`/`nome` no topo mantêm compatibilidade com o cliente antigo (envio único)
+    res.json({ success: true, documentos, id: documentos[0].id, nome: documentos[0].nome });
   } catch (err) {
     next(err);
   }

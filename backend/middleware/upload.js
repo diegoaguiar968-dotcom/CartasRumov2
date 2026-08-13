@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const fileFilter = (_req, file, cb) => {
+const somentePdf = (_req, file, cb) => {
   if (file.mimetype === 'application/pdf') {
     cb(null, true);
   } else {
@@ -28,10 +28,33 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
-const upload = multer({
+// Documentos complementares aceitam qualquer formato (docx, xlsx, zip, imagens...).
+// Executáveis são barrados por segurança — não há motivo para anexá-los a uma carta.
+const EXTENSOES_BLOQUEADAS = [
+  '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.ps1', '.sh', '.jar', '.app', '.dll',
+];
+
+const qualquerFormato = (_req, file, cb) => {
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  if (EXTENSOES_BLOQUEADAS.includes(ext)) {
+    cb(new Error(`Arquivos ${ext} não são permitidos por segurança.`), false);
+  } else {
+    cb(null, true);
+  }
+};
+
+/** Upload restrito a PDF — ofício principal da ANTT e modelos de referência. */
+const uploadPdf = multer({
   storage,
   limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB
-  fileFilter,
+  fileFilter: somentePdf,
 });
 
-module.exports = upload;
+/** Upload livre — documentos complementares (nota técnica, planilhas, anexos). */
+const uploadLivre = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB (zips e planilhas pesam mais)
+  fileFilter: qualquerFormato,
+});
+
+module.exports = { uploadPdf, uploadLivre };

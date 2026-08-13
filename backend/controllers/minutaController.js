@@ -64,11 +64,17 @@ async function gerarMinutaHandler(req, res, next) {
       }
     }
 
+    // Aceita pontos como string (formato antigo) ou objeto. A "resposta" é a
+    // orientação editada pelo usuário — pode vir como `sugestao` se o cliente
+    // enviar o ponto sem alterações.
     const rawPontos = req.body.pontosRespondidos || req.body.pontos || [];
-    const pontosRespondidos = rawPontos.map((item) => ({
-      ponto: item.ponto || item.pergunta || '',
-      resposta: item.resposta || '',
-    }));
+    const pontosRespondidos = rawPontos
+      .map((item) => (typeof item === 'string' ? { ponto: item } : item || {}))
+      .map((item) => ({
+        ponto: (item.ponto || item.pergunta || '').trim(),
+        resposta: (item.resposta || item.sugestao || '').trim(),
+      }))
+      .filter((item) => item.ponto);
 
     const textoModelosReferencia = [...modelosPermanentes, ...session.modelos]
       .map((m) => m.textoExtraido)
