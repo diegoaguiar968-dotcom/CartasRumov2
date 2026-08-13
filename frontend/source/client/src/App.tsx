@@ -22,7 +22,8 @@ import {
   RefreshCw,
   Share2,
 } from "lucide-react";
-import IdentifyWidget, { getResponsavel, AREA_OPCOES } from "./components/identify-widget";
+import IdentifyWidget, { getResponsavel, AREA_OPCOES, estaIdentificado } from "./components/identify-widget";
+import LoginGate from "./components/LoginGate";
 import { InfoCard, PrimaryButton, SecondaryButton, TextField } from "./components/ui-kit";
 import Stepper from "./components/Stepper";
 import AjudaStep from "./components/steps/AjudaStep";
@@ -202,6 +203,8 @@ const CAMPOS_SHAREPOINT: { rot: string; chave: keyof HistoricoEntrada | null }[]
 
 export default function App() {
   const { toast } = useToast();
+  // Tela de login inicial: bloqueia o app até nome, e-mail e área serem informados
+  const [identificado, setIdentificado] = useState(estaIdentificado);
   const notificarErro = useCallback(
     (msg: string) => toast({ variant: "destructive", title: "Ops", description: msg }),
     [toast]
@@ -938,6 +941,11 @@ export default function App() {
       siglas && !jaTemSigla ? ` - ${siglas}` : ""
     }`;
   };
+
+  // Enquanto não identificado, mostra apenas a tela de login
+  if (!identificado) {
+    return <LoginGate onConcluir={() => setIdentificado(true)} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "hsl(var(--surface-app))" }}>

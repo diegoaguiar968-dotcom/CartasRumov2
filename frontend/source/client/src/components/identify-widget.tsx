@@ -38,6 +38,19 @@ export function getResponsavel() {
   return { responsavel: get(K_NOME), area: get(K_AREA), email: get(K_EMAIL) };
 }
 
+/** Grava a identificação (usado pela tela de login inicial e pelo widget). */
+export function setResponsavel({ nome, area, email }: { nome: string; area: string; email: string }) {
+  set(K_NOME, nome.trim());
+  set(K_AREA, area.trim());
+  set(K_EMAIL, email.trim());
+}
+
+/** true quando nome, área e e-mail já foram informados. */
+export function estaIdentificado() {
+  const r = getResponsavel();
+  return !!(r.responsavel && r.area && r.email);
+}
+
 export default function IdentifyWidget() {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
