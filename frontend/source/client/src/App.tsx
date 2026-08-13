@@ -1314,13 +1314,13 @@ export default function App() {
                   }}
                 />
                 <label className="block text-xs mb-1.5" style={{ color: "hsl(var(--text-muted))" }}>
-                  Orientação para a resposta{" "}
+                  Rascunho da resposta{" "}
                   <span style={{ opacity: 0.75 }}>· sugestão da IA, ajuste como quiser</span>
                 </label>
                 <textarea
                   value={p.resposta}
                   onChange={(e) => atualizarPonto(p.id, "resposta", e.target.value)}
-                  placeholder="Em uma ou duas frases, o sentido que a resposta deve seguir..."
+                  placeholder="Ex.: Informamos que o documento foi revisado e atualizado conforme solicitado, seguindo em anexo..."
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg text-sm resize-y"
                   style={{

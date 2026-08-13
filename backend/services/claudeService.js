@@ -132,7 +132,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "malha": "quais entidades do grupo Rumo são destinatárias ou mencionadas no ofício — responda com uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte' para múltiplas. Use 'não identificada' se nenhuma for identificada.",
   "assunto": "assunto conciso (máx 80 chars) no formato: [Tipo de Ação] - [Programa/Referência] - [Entidade(s)]. Exemplos: 'Dilação de Prazo - COE - RMP', 'Envio de Documentos - PSI - RMP', 'Informações sobre Acidente km 123'. Sem ponto final.",
   "pontos": [
-    { "ponto": "o que a ANTT solicita neste item, de forma objetiva", "sugestao": "direção que a resposta deve seguir" },
+    { "ponto": "o que a ANTT solicita neste item, de forma objetiva", "sugestao": "rascunho da RESPOSTA na voz da empresa (ex.: 'Informamos que o documento foi revisado e atualizado conforme solicitado, seguindo em anexo.')" },
     { "ponto": "...", "sugestao": "..." }
   ],
   "documentosRequisitados": [
@@ -149,7 +149,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
 
 Sobre o campo 'pontos' — separe cada solicitação distinta em seu próprio item (nada de agrupar duas exigências em um ponto só). Para cada ponto:
 - 'ponto': o que está sendo pedido, em uma frase clara e específica.
-- 'sugestao': em 1 ou 2 frases curtas, o ENCAMINHAMENTO que a resposta deve seguir (ex.: "Confirmar o envio da lista atualizada e informar que os dados foram apurados em campo."). É apenas a direção para orientar quem vai redigir — NÃO escreva a resposta final, não use linguagem de carta nem invente dados, números, datas ou conclusões que não estejam no ofício.`;
+- 'sugestao': um RASCUNHO da própria resposta ao ponto, já escrito na voz da empresa (1ª pessoa do plural) e no tom formal da carta — como se fosse o texto que será enviado à ANTT, porém curto (1 a 2 frases). Escreva a RESPOSTA, não a descrição do pedido. Exemplos: "Informamos que o documento foi revisado e atualizado conforme solicitado, seguindo em anexo (Anexo 1 - Planilha Atualizada)."; "Esclarecemos que a regularização das pendências está em andamento, com conclusão prevista dentro do prazo indicado.". Regras: comece pela resposta (ex.: "Informamos que...", "Esclarecemos que...", "Encaminhamos..."); NÃO invente números, datas, valores ou nomes de anexo específicos que não constem do ofício — proponha a resposta usual e afirmativa que a empresa daria, que o usuário confirmará e ajustará.`;
 
   const rawResponse = await callClaude(
     [{ role: 'user', content: userMessage }],
@@ -214,7 +214,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "malha": "quais entidades do grupo Rumo são destinatárias — uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte'. Use 'não identificada' se nenhuma identificada.",
   "assunto": "assunto conciso (máx 80 chars) no formato: [Tipo de Ação] - [Programa/Referência] - [Entidade(s)]. Exemplos: 'Dilação de Prazo - COE - RMP', 'Envio de Documentos - PSI - RMP', 'Informações sobre Acidente km 123'. Sem ponto final.",
   "pontos": [
-    { "ponto": "o que a ANTT solicita neste item, de forma objetiva", "sugestao": "direção que a resposta deve seguir" }
+    { "ponto": "o que a ANTT solicita neste item, de forma objetiva", "sugestao": "rascunho da RESPOSTA na voz da empresa (ex.: 'Informamos que o documento foi revisado e atualizado conforme solicitado, seguindo em anexo.')" }
   ],
   "documentosRequisitados": ["documento 1 solicitado"]
 }
@@ -223,7 +223,7 @@ Para 'malha': procure referências a contratos de concessão, trechos ferroviár
 
 Sobre o campo 'pontos' — separe cada solicitação distinta em seu próprio item (nada de agrupar duas exigências em um ponto só). Para cada ponto:
 - 'ponto': o que está sendo pedido, em uma frase clara e específica.
-- 'sugestao': em 1 ou 2 frases curtas, o ENCAMINHAMENTO que a resposta deve seguir (ex.: "Confirmar o envio da lista atualizada e informar que os dados foram apurados em campo."). É apenas a direção para orientar quem vai redigir — NÃO escreva a resposta final, não use linguagem de carta nem invente dados, números, datas ou conclusões que não estejam no ofício.`;
+- 'sugestao': um RASCUNHO da própria resposta ao ponto, já escrito na voz da empresa (1ª pessoa do plural) e no tom formal da carta — como se fosse o texto que será enviado à ANTT, porém curto (1 a 2 frases). Escreva a RESPOSTA, não a descrição do pedido. Exemplos: "Informamos que o documento foi revisado e atualizado conforme solicitado, seguindo em anexo (Anexo 1 - Planilha Atualizada)."; "Esclarecemos que a regularização das pendências está em andamento, com conclusão prevista dentro do prazo indicado.". Regras: comece pela resposta (ex.: "Informamos que...", "Esclarecemos que...", "Encaminhamos..."); NÃO invente números, datas, valores ou nomes de anexo específicos que não constem do ofício — proponha a resposta usual e afirmativa que a empresa daria, que o usuário confirmará e ajustará.`;
 
   const body = {
     model: MODEL,
@@ -369,7 +369,7 @@ NÃO inclua: cabeçalho da carta, número do ofício, data, destinatário, sauda
 Comece diretamente com o primeiro parágrafo de resposta.` : ''}`;
 
   const pontosFormatados = pontosRespondidos
-    ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   ORIENTAÇÃO PARA A RESPOSTA: ${item.resposta || '(não informado)'}`)
+    ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   RASCUNHO DA RESPOSTA: ${item.resposta || '(não informado)'}`)
     .join('\n\n') || 'Nenhum ponto respondido fornecido.';
 
   const dataHoje = new Date().toLocaleDateString('pt-BR', {
@@ -393,8 +393,7 @@ Fundamento Legal: ${briefing?.fundamentoLegal || 'Não citado'}
 ${malhaIdentificada}
 
 ═══════════ PONTOS A RESPONDER ═══════════
-A "ORIENTAÇÃO PARA A RESPOSTA" indica o SENTIDO que a resposta deve seguir — é um rascunho de direção, não o texto final.
-Desenvolva-a em linguagem formal de carta, com a profundidade adequada, sem copiá-la literalmente e sem acrescentar dados, números ou compromissos que não estejam informados.
+O "RASCUNHO DA RESPOSTA" é um esboço da resposta ao ponto, na voz da empresa. Desenvolva-o em linguagem formal de carta, com a profundidade adequada, sem copiá-lo literalmente e sem acrescentar dados, números, prazos ou compromissos que não estejam informados nele ou no ofício.
 
 ${pontosFormatados}
 ${contextosAdicionais?.length ? `
