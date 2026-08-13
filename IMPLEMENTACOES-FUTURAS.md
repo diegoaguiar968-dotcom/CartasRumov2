@@ -84,6 +84,55 @@ mas não resolve o header/footer flutuante.
 
 ---
 
+## 3. 🔵 Login real via conta Microsoft do Grupo Rumo (Entra ID / SSO)
+
+**O que é:** substituir a tela de identificação atual (que só coleta nome/e-mail/
+área, sem senha) por um **login de verdade** com a conta Microsoft corporativa
+(Entra ID, ex-Azure AD). O usuário clica em "Entrar com Microsoft", autentica no
+tenant do Grupo Rumo e o ARCA passa a confiar nesses dados.
+
+**Ganhos:**
+- Nome e e-mail vêm **automáticos** do login (sem digitar, sem erro de digitação).
+- Acesso **restrito** a contas @rumolog (ou a um grupo de segurança específico) —
+  hoje qualquer pessoa com o link acessa preenchendo os campos.
+- Base para, no futuro, ter permissões por perfil.
+
+**Pré-requisito (bloqueador, não é código) — depende do TI/Azure de vocês:**
+- **Registro de aplicativo no Entra ID** do tenant do Grupo Rumo, que gera
+  `Client ID` e `Tenant ID` e define as **Redirect URIs** (a URL do frontend no
+  Render). Sem isso, nada do resto funciona. Quem tem admin do Entra precisa
+  criar (ou autorizar a criação) desse app registration.
+
+**Como implementar (quando o app registration existir):**
+- **Frontend:** biblioteca **MSAL.js** (`@azure/msal-browser`) — login por
+  popup/redirect; ao autenticar, recebe o token com `name`/`email` (claims).
+  A `LoginGate` atual vira o botão "Entrar com Microsoft"; o widget do canto
+  continua mostrando o nome.
+- **Backend:** validar o **JWT** em cada `/api/*` (assinatura via JWKS do tenant,
+  `audience`, `issuer`, `tenant`), extraindo identidade dos claims. Hoje a
+  identidade vem de headers/localStorage; passaria a vir do token verificado.
+- **Restrição de acesso:** limitar ao tenant do Grupo Rumo e, se quiserem, a um
+  **grupo de segurança** específico.
+
+**Decisões a tomar ao retomar:**
+1. Restringir ao **tenant inteiro** (qualquer conta Rumo) ou a um **grupo**?
+2. **Área:** manter a seleção manual (as opções do SharePoint) ou tentar puxar do
+   claim `department` do Entra? (Recomendo manual — o department raramente casa
+   com a lista de áreas do SharePoint.)
+3. Como conviver com o modo atual: manter o login simples como *fallback* (ex.:
+   ambiente sem SSO) ou exigir Microsoft sempre?
+
+**Esforço estimado:** ~1–2 dias de desenvolvimento **após** o app registration
+existir. O caminho crítico é o registro no Entra (coordenação com o TI).
+
+**Pontos de código / referência:**
+- Tela atual: `frontend/source/client/src/components/LoginGate.tsx` (vira o botão
+  Microsoft) e `identify-widget.tsx` (armazenamento da identidade).
+- Proteção da API: `backend/middleware/` (hoje `apiKeyMiddleware`; entraria a
+  validação de JWT do Entra).
+
+---
+
 ## Concluídas (referência rápida)
 
 - ✅ Formatação do .docx: vírgula na saudação, títulos sem recuo + negrito, nome
