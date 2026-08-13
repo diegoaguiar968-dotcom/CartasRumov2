@@ -19,6 +19,55 @@ function formsTemplate() {
   return process.env.SHAREPOINT_FORMS_URL_TEMPLATE || DEFAULT_FORMS_TEMPLATE || '';
 }
 
+// Opções da coluna "Assuntos" no SharePoint, exatamente como cadastradas lá.
+// Um valor com grafia diferente não casa com nenhuma opção e é criado como
+// escolha nova (aparece sem cor na lista) — por isso normalizamos antes de enviar.
+const ASSUNTOS_CANONICOS = [
+  'Patrimônio',
+  'Ativos',
+  'Passivos',
+  'Interferências',
+  'DUP',
+  'Investimentos Obrigatórios',
+  'Obrigações Contratuais',
+  'Indicadores',
+  'Acidentes',
+  'Solicitação de acesso',
+  'Fiscalização',
+  'Projeto de RDT/RPMF',
+  'Resposta Ofício',
+  'Outros',
+];
+
+/** Remove acentos e caixa, para comparar rótulos escritos de formas diferentes. */
+function chaveComparacao(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+const MAPA_ASSUNTOS = new Map(ASSUNTOS_CANONICOS.map((a) => [chaveComparacao(a), a]));
+// Grafias antigas que já foram gravadas no histórico
+MAPA_ASSUNTOS.set(chaveComparacao('RDT e RPMF'), 'Projeto de RDT/RPMF');
+MAPA_ASSUNTOS.set(chaveComparacao('outro'), 'Outros');
+
+/**
+ * Converte o assunto gravado para a grafia exata do SharePoint.
+ * Aceita múltiplos assuntos separados por ";" ou ",". Valores desconhecidos
+ * são preservados como vieram (melhor registrar algo do que perder o dado).
+ */
+function normalizarAssuntos(valor) {
+  const partes = String(valor || '')
+    .split(/[;,]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!partes.length) return '';
+  return partes.map((p) => MAPA_ASSUNTOS.get(chaveComparacao(p)) || p).join(';');
+}
+
 /**
  * Modo de integração ativo:
  *  - 'forms'   → link de Microsoft Forms pré-preenchido (sem premium)
@@ -68,7 +117,7 @@ async function formsUrl(req, res, next) {
       ZZPROCESSOZZ: e.processo || '',
       ZZAREAZZ: e.area || '',
       ZZFORMAZZ: e.forma_envio || 'SEI',
-      ZZASSUNTOSZZ: e.assuntos || 'Resposta Ofício',
+      ZZASSUNTOSZZ: normalizarAssuntos(e.assuntos) || 'Resposta Ofício',
       ZZRESPONSAVELZZ: e.responsavel || '',
       ZZEMAILZZ: e.responsavel_email || '',
     };
@@ -120,7 +169,7 @@ async function registrarSharePoint(req, res, next) {
       oficio: e.oficio || '',
       processo: e.processo || '',
       formaEnvio: e.forma_envio || 'SEI',
-      assuntos: e.assuntos || '',
+      assuntos: normalizarAssuntos(e.assuntos),
       responsavel: e.responsavel || '',
       responsavelEmail: e.responsavel_email || '',
       area: e.area || '',
@@ -155,6 +204,11 @@ async function registrarSharePoint(req, res, next) {
       itemUrl = j.itemUrl || j.ItemUrl || j.link || null;
     } catch {
       /* fluxo não retornou JSON — tudo bem */
+    }
+
+    // Sem URL do item, abre a própria lista para conferência (se configurada)
+    if (!itemUrl && process.env.SHAREPOINT_LIST_URL) {
+      itemUrl = process.env.SHAREPOINT_LIST_URL;
     }
 
     const upd = await query(

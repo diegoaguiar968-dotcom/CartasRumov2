@@ -113,7 +113,15 @@ Use estes tipos de pergunta:
 | Ofício | Texto |
 | Forma de Envio | Escolha → opções: `SEI`, `E-mail`, `Presencialmente` |
 | Número do Processo | Texto |
-| Assuntos | Escolha → as 14 opções (patrimônio, ativos, passivos, interferências, DUP, investimentos obrigatórios, obrigações contratuais, indicadores, acidentes, solicitação de acesso, fiscalização, RDT e RPMF, Resposta Ofício, Outros) |
+| Assuntos | Escolha → as 14 opções, com a grafia EXATA da lista do SharePoint: Patrimônio, Ativos, Passivos, Interferências, DUP, Investimentos Obrigatórios, Obrigações Contratuais, Indicadores, Acidentes, Solicitação de acesso, Fiscalização, Projeto de RDT/RPMF, Resposta Ofício, Outros |
+
+> **Atenção:** os rótulos de "Assuntos" precisam bater exatamente com as opções
+> cadastradas na coluna do SharePoint (maiúsculas e acentos inclusive). Se a
+> grafia diferir, o SharePoint cria uma escolha nova, que aparece **sem cor** na
+> lista. A lista canônica vive em dois lugares — `ASSUNTOS_OPCOES`
+> (`frontend/source/client/src/App.tsx`) e `ASSUNTOS_CANONICOS`
+> (`backend/controllers/sharepointController.js`); ao mudar uma opção no
+> SharePoint, atualize as duas.
 
 > ⚠️ **Por que a Malha é "Texto" e não "Escolha"?**
 > No SharePoint, a coluna Malha aceita **várias malhas ao mesmo tempo** (uma carta

@@ -161,19 +161,22 @@ const STEPS_ESPONTANEA = [
 ];
 
 // Opções da coluna "Assuntos" no SharePoint (devem casar exatamente com a lista)
+// ATENÇÃO: estes rótulos precisam ser IDÊNTICOS às opções da coluna "Assuntos"
+// no SharePoint (inclusive maiúsculas e acentos). Um valor diferente não casa
+// com nenhuma opção da lista e entra como escolha nova, sem cor.
 const ASSUNTOS_OPCOES = [
-  "patrimônio",
-  "ativos",
-  "passivos",
-  "interferências",
+  "Patrimônio",
+  "Ativos",
+  "Passivos",
+  "Interferências",
   "DUP",
-  "investimentos obrigatórios",
-  "obrigações contratuais",
-  "indicadores",
-  "acidentes",
-  "solicitação de acesso",
-  "fiscalização",
-  "RDT e RPMF",
+  "Investimentos Obrigatórios",
+  "Obrigações Contratuais",
+  "Indicadores",
+  "Acidentes",
+  "Solicitação de acesso",
+  "Fiscalização",
+  "Projeto de RDT/RPMF",
   "Resposta Ofício",
   "Outros",
 ];
@@ -309,6 +312,8 @@ export default function App() {
   const [histFiltroAssunto, setHistFiltroAssunto] = useState("");
   const [histFiltroForma, setHistFiltroForma] = useState("");
   const [histFiltroSP, setHistFiltroSP] = useState(""); // "", "sim", "nao"
+  // Link a abrir manualmente quando o navegador bloqueia a aba nova
+  const [linkPendente, setLinkPendente] = useState<{ url: string; aviso: string } | null>(null);
   const [histOrdenar, setHistOrdenar] = useState("criado_em");
   const [histDirecao, setHistDirecao] = useState<"asc" | "desc">("desc");
   const [histOpcoes, setHistOpcoes] = useState<{ responsaveis: string[]; malhas: string[]; orgaos: string[] }>({
@@ -792,13 +797,45 @@ export default function App() {
     }
   }
 
+  /**
+   * Abre uma aba já no clique do usuário e só depois a direciona para a URL.
+   * Chamar window.open() após um await faz o navegador tratar a aba como popup
+   * e bloqueá-la — por isso a aba é reservada antes da chamada à API.
+   * (Sem "noopener" porque ele faz o open() devolver null; a referência é
+   * limpa em seguida para não expor a janela de origem.)
+   */
+  function reservarAba(): Window | null {
+    const win = window.open("", "_blank");
+    if (win) {
+      try {
+        win.opener = null;
+      } catch {
+        /* alguns navegadores não permitem — sem impacto */
+      }
+    }
+    return win;
+  }
+
+  function usarAba(win: Window | null, url: string, aviso: string) {
+    if (win && !win.closed) {
+      win.location.href = url;
+      return true;
+    }
+    // Aba bloqueada pelo navegador: oferece o link para abrir manualmente
+    setLinkPendente({ url, aviso });
+    return false;
+  }
+
   async function abrirFormularioSharePoint(id: string) {
+    const win = reservarAba();
     setRegistrandoSP(true);
     try {
       const url = await getFormsUrl(id);
-      window.open(url, "_blank", "noopener");
-      toast({ description: "Formulário aberto — revise os dados e clique em Enviar." });
+      if (usarAba(win, url, "Formulário de registro")) {
+        toast({ description: "Formulário aberto — revise os dados e clique em Enviar." });
+      }
     } catch (e: any) {
+      win?.close();
       notificarErro(e.message || "Não foi possível abrir o formulário.");
     } finally {
       setRegistrandoSP(false);
@@ -806,18 +843,25 @@ export default function App() {
   }
 
   async function registrarNoSharePoint(id: string) {
+    const win = reservarAba();
     setRegistrandoSP(true);
     try {
       const r = await registrarSharePoint(id);
       if (!r.success) {
+        win?.close();
         notificarErro(r.message || "Não foi possível registrar no SharePoint.");
         return;
       }
       if (r.itemUrl) {
-        window.open(r.itemUrl, "_blank", "noopener");
-        toast({ description: "Carta registrada — abrindo o item no SharePoint." });
+        if (usarAba(win, r.itemUrl, "Item registrado no SharePoint")) {
+          toast({ description: "Carta registrada — abrindo o item no SharePoint." });
+        }
       } else {
-        toast({ description: "Carta enviada ao SharePoint." });
+        win?.close();
+        toast({
+          description:
+            "Carta registrada. O fluxo do Power Automate não devolveu o link do item — configure SHAREPOINT_LIST_URL no servidor para abrir a lista automaticamente.",
+        });
       }
       const quando = r.registradoEm || new Date().toISOString();
       setHistDetalhe((d) => (d ? { ...d, sharepoint_em: quando } : d));
@@ -2076,6 +2120,55 @@ export default function App() {
 
       <IdentifyWidget />
       <Toaster />
+
+      {/* ── Link bloqueado pelo navegador: abre manualmente ── */}
+      {linkPendente && (
+        <div
+          onClick={() => setLinkPendente(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "hsl(210 100% 4% / 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            padding: "16px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="arca-fade"
+            style={{
+              background: "hsl(var(--surface-card))",
+              border: "1px solid hsl(var(--border))",
+              borderRadius: "12px",
+              maxWidth: "460px",
+              width: "100%",
+              padding: "22px",
+              boxShadow: "0 20px 50px hsl(210 100% 4% / 0.5)",
+            }}
+          >
+            <p className="font-semibold text-white text-[15px] mb-1">{linkPendente.aviso}</p>
+            <p className="text-sm mb-5" style={{ color: "hsl(var(--text-muted))", lineHeight: 1.6 }}>
+              O navegador bloqueou a abertura automática da aba. Clique no botão abaixo para abrir.
+            </p>
+            <div className="flex justify-end gap-2">
+              <SecondaryButton onClick={() => setLinkPendente(null)}>Fechar</SecondaryButton>
+              <a
+                href={linkPendente.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setLinkPendente(null)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold"
+                style={{ background: "hsl(var(--accent))", color: "hsl(210 100% 6%)" }}
+              >
+                <Share2 className="w-4 h-4" /> Abrir no SharePoint
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal de confirmação (substitui window.confirm) ── */}
       {confirmState.open && (
