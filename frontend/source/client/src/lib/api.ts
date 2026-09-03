@@ -305,22 +305,49 @@ export async function baixarHistoricoDocx(id: string): Promise<string> {
   return nome;
 }
 
+/** Monta o corpo multipart com os anexos da carta (vazio quando não há). */
+function corpoComAnexos(anexos: File[]): FormData | undefined {
+  if (!anexos.length) return undefined;
+  const form = new FormData();
+  for (const f of anexos) form.append("anexos", f);
+  return form;
+}
+
 export async function registrarSharePoint(
-  id: string
+  id: string,
+  anexos: File[] = []
 ): Promise<{ success: boolean; itemUrl?: string | null; registradoEm?: string; message?: string }> {
-  const res = await req(`/api/historico/${id}/sharepoint`, { method: "POST" });
+  const res = await req(`/api/historico/${id}/sharepoint`, {
+    method: "POST",
+    body: corpoComAnexos(anexos),
+  });
+  return res.json();
+}
+
+/** Cria a pasta da carta na biblioteca e sobe o .docx + os anexos. */
+export async function criarPastaSharePoint(
+  id: string,
+  anexos: File[] = []
+): Promise<{ success: boolean; pastaNome?: string; pastaUrl?: string | null; arquivos?: number; message?: string }> {
+  const res = await req(`/api/historico/${id}/sharepoint/pasta`, {
+    method: "POST",
+    body: corpoComAnexos(anexos),
+  });
   return res.json();
 }
 
 export type SharepointMode = "forms" | "webhook" | "none";
 
-export async function getSharepointMode(): Promise<SharepointMode> {
+export async function getSharepointMode(): Promise<{ modo: SharepointMode; pasta: boolean }> {
   try {
     const res = await req("/api/status");
     const data = await res.json();
-    return (data.sharepointMode as SharepointMode) || "none";
+    return {
+      modo: (data.sharepointMode as SharepointMode) || "none",
+      pasta: !!data.sharepointPasta,
+    };
   } catch {
-    return "none";
+    return { modo: "none", pasta: false };
   }
 }
 

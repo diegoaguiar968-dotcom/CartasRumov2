@@ -71,6 +71,8 @@ app.get('/api/status', (req, res) => {
     version: '2.0.0',
     ai: process.env.ANTHROPIC_API_KEY ? 'conectada' : 'desconectada (configure ANTHROPIC_API_KEY)',
     sharepointMode: sharepointMode(),
+    // Indica ao frontend se o botão "Criar pasta no SharePoint" deve aparecer
+    sharepointPasta: !!process.env.SHAREPOINT_PASTA_WEBHOOK_URL,
   });
 });
 

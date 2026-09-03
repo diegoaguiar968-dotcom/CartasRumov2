@@ -21,6 +21,7 @@ import {
   PencilLine,
   RefreshCw,
   Share2,
+  FolderPlus,
 } from "lucide-react";
 import IdentifyWidget, { getResponsavel, AREA_OPCOES, estaIdentificado } from "./components/identify-widget";
 import LoginGate from "./components/LoginGate";
@@ -46,6 +47,7 @@ import {
   atualizarHistoricoEntrada,
   baixarHistoricoDocx,
   registrarSharePoint,
+  criarPastaSharePoint,
   getSharepointMode,
   getFormsUrl,
   type SharepointMode,
@@ -330,6 +332,12 @@ export default function App() {
   const [histTotal, setHistTotal] = useState(0);
   const [registrandoSP, setRegistrandoSP] = useState(false);
   const [spMode, setSpMode] = useState<SharepointMode>("none");
+  const [spPastaAtiva, setSpPastaAtiva] = useState(false);
+  const [criandoPasta, setCriandoPasta] = useState(false);
+  // Arquivos relacionados à carta aberta no histórico. Ficam só no navegador
+  // até você clicar em registrar / criar pasta — o ARCA não os armazena.
+  const [anexosCarta, setAnexosCarta] = useState<File[]>([]);
+  const anexosInputRef = useRef<HTMLInputElement>(null);
   const HIST_PAGINA = 50;
 
   const steps = flowType === "espontanea" ? STEPS_ESPONTANEA : STEPS_RESPOSTA;
@@ -362,7 +370,12 @@ export default function App() {
         setAnttSuperintendencias(r.superintendencias);
       })
       .catch(() => {});
-    getSharepointMode().then(setSpMode).catch(() => {});
+    getSharepointMode()
+      .then(({ modo, pasta }) => {
+        setSpMode(modo);
+        setSpPastaAtiva(pasta);
+      })
+      .catch(() => {});
   }, []);
 
   const siglaParaNome = useMemo(
@@ -735,6 +748,7 @@ export default function App() {
       const r = await getHistoricoDetalhe(id);
       setHistDetalhe(r.entrada);
       setHistMinutaAberta(false);
+      setAnexosCarta([]); // anexos são por carta aberta
     } catch {
       notificarErro("Não foi possível carregar os detalhes.");
     }
@@ -845,11 +859,38 @@ export default function App() {
     }
   }
 
+  async function criarPastaNoSharePoint(id: string) {
+    const win = reservarAba();
+    setCriandoPasta(true);
+    try {
+      const r = await criarPastaSharePoint(id, anexosCarta);
+      if (!r.success) {
+        win?.close();
+        notificarErro(r.message || "Não foi possível criar a pasta.");
+        return;
+      }
+      const qtd = r.arquivos ?? 0;
+      if (r.pastaUrl) {
+        if (usarAba(win, r.pastaUrl, `Pasta "${r.pastaNome}" no SharePoint`)) {
+          toast({ description: `Pasta "${r.pastaNome}" criada com ${qtd} arquivo(s) — abrindo no SharePoint.` });
+        }
+      } else {
+        win?.close();
+        toast({ description: `Pasta "${r.pastaNome}" criada com ${qtd} arquivo(s).` });
+      }
+    } catch (e: any) {
+      win?.close();
+      notificarErro(e.message || "Erro ao criar a pasta no SharePoint.");
+    } finally {
+      setCriandoPasta(false);
+    }
+  }
+
   async function registrarNoSharePoint(id: string) {
     const win = reservarAba();
     setRegistrandoSP(true);
     try {
-      const r = await registrarSharePoint(id);
+      const r = await registrarSharePoint(id, anexosCarta);
       if (!r.success) {
         win?.close();
         notificarErro(r.message || "Não foi possível registrar no SharePoint.");
@@ -1978,6 +2019,70 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Arquivos relacionados a esta carta — vão junto ao SharePoint */}
+                {(spMode === "webhook" || spPastaAtiva) && (
+                  <div
+                    className="mt-4 p-3 rounded-lg"
+                    style={{ background: "hsl(var(--surface-app))", border: "1px solid hsl(var(--border))" }}
+                  >
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className="text-sm text-white font-medium">Arquivos desta carta</p>
+                        <p style={{ color: "hsl(var(--text-muted))", fontSize: "12px" }}>
+                          Anexos, recibo de protocolo, planilhas… vão junto com o .docx para o SharePoint.
+                        </p>
+                      </div>
+                      <input
+                        ref={anexosInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const novos = Array.from(e.target.files || []);
+                          e.target.value = "";
+                          if (novos.length) setAnexosCarta((a) => [...a, ...novos]);
+                        }}
+                      />
+                      <SecondaryButton onClick={() => anexosInputRef.current?.click()}>
+                        <Paperclip className="w-4 h-4" /> Adicionar arquivos
+                      </SecondaryButton>
+                    </div>
+
+                    {anexosCarta.length > 0 ? (
+                      <div className="mt-3 space-y-1.5">
+                        {anexosCarta.map((f, i) => (
+                          <div
+                            key={`${f.name}-${i}`}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                            style={{ background: "hsl(var(--surface-card))", border: "1px solid hsl(var(--border))" }}
+                          >
+                            <FileText className="w-4 h-4 shrink-0" style={{ color: "hsl(var(--text-muted))" }} />
+                            <span className="text-sm text-white truncate flex-1">{f.name}</span>
+                            <span className="text-[11px] shrink-0" style={{ color: "hsl(var(--text-muted))" }}>
+                              {(f.size / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                            <button
+                              onClick={() => setAnexosCarta((a) => a.filter((_, idx) => idx !== i))}
+                              title="Remover arquivo"
+                              className="p-1 rounded hover:opacity-80 shrink-0"
+                              style={{ color: "hsl(var(--text-muted))" }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <p className="text-[11px] pt-1" style={{ color: "hsl(var(--text-muted))" }}>
+                          Os arquivos ficam apenas nesta tela até você registrar ou criar a pasta — não são guardados no ARCA.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-[12px] mt-2" style={{ color: "hsl(var(--text-muted))" }}>
+                        Nenhum arquivo adicionado. O .docx da carta é sempre enviado.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2 mt-4">
                   <SecondaryButton onClick={() => setHistMinutaAberta((v) => !v)}>
                     {histMinutaAberta ? "Ocultar minuta" : "Ver minuta"}
@@ -2000,6 +2105,15 @@ export default function App() {
                   <PrimaryButton onClick={() => reabrirDoHistorico(histDetalhe)}>
                     <PencilLine className="w-4 h-4" /> Reabrir para edição
                   </PrimaryButton>
+                  {spPastaAtiva && (
+                    <SecondaryButton
+                      onClick={() => criarPastaNoSharePoint(histDetalhe.id)}
+                      disabled={criandoPasta}
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                      {criandoPasta ? "Criando pasta…" : "Criar pasta no SharePoint"}
+                    </SecondaryButton>
+                  )}
                   {/* Registro no SharePoint — comportamento conforme o modo configurado */}
                   {spMode === "forms" ? (
                     <SecondaryButton onClick={() => abrirFormularioSharePoint(histDetalhe.id)} disabled={registrandoSP}>

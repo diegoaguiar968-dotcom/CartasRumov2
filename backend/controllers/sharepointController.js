@@ -7,6 +7,7 @@
  * frontend mantém o botão desabilitado com aviso.
  */
 
+const fs = require('fs');
 const { isEnabled, query } = require('../services/db');
 const { gerarDocxDeEntrada } = require('./exportController');
 
@@ -133,6 +134,65 @@ async function formsUrl(req, res, next) {
   }
 }
 
+// Biblioteca e caminho onde as pastas das cartas são criadas. O padrão reproduz
+// a organização já usada manualmente pela equipe; ajustável por env.
+const PASTA_BIBLIOTECA = () => process.env.SHAREPOINT_BIBLIOTECA || 'Pasta Regulatorio';
+const PASTA_CAMINHO = () => process.env.SHAREPOINT_PASTA_CAMINHO || 'Cartas e Oficios/Cartas/Cartas 2026';
+
+/** Caracteres proibidos em nomes de pasta/arquivo no SharePoint. */
+function sanitizarNomeSharePoint(s) {
+  return String(s || '')
+    .replace(/[\\/:*?"<>|#%{}~&]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+\./g, '.') // evita "Recibo protocolo .pdf" ao remover caracteres
+    .trim()
+    .replace(/[. ]+$/, ''); // SharePoint não aceita terminar com ponto ou espaço
+}
+
+/**
+ * Nome da pasta da carta, no padrão usado pela equipe:
+ *   "NNNN - ÓRGÃO - MALHA - Assunto"
+ * Ex.: "0536 - ANTT - RMO - Informação sobre reunião do Conselho"
+ */
+function nomePastaCarta(e) {
+  const numero = (String(e.titulo || '').match(/\d+/) || ['0000'])[0].padStart(4, '0');
+  const orgao = sanitizarNomeSharePoint(e.orgao || 'ANTT');
+  const malha = sanitizarNomeSharePoint(e.malha || '');
+  const assunto = sanitizarNomeSharePoint(e.tema || 'Carta');
+  const partes = [numero, orgao, malha, assunto].filter(Boolean);
+  // O caminho completo no SharePoint tem limite prático de ~400 chars
+  return partes.join(' - ').substring(0, 180).replace(/[. ]+$/, '');
+}
+
+/**
+ * Lê os arquivos enviados via multipart e devolve no formato do payload,
+ * já em base64. Usado tanto no registro quanto na criação da pasta.
+ */
+function anexosDoRequest(req) {
+  const arquivos = [
+    ...(req.files?.anexos || []),
+    ...(req.files?.files || []),
+    ...(req.file ? [req.file] : []),
+  ];
+  return arquivos.map((a) => ({
+    nome: sanitizarNomeSharePoint(a.originalname) || 'anexo',
+    conteudoBase64: fs.readFileSync(a.path).toString('base64'),
+    tamanho: a.size,
+  }));
+}
+
+/** Remove os temporários do multer depois de montar o payload. */
+function limparTemporarios(req) {
+  const arquivos = [
+    ...(req.files?.anexos || []),
+    ...(req.files?.files || []),
+    ...(req.file ? [req.file] : []),
+  ];
+  for (const a of arquivos) {
+    fs.unlink(a.path, () => {});
+  }
+}
+
 async function registrarSharePoint(req, res, next) {
   const webhook = process.env.SHAREPOINT_WEBHOOK_URL;
   if (!webhook) {
@@ -150,6 +210,9 @@ async function registrarSharePoint(req, res, next) {
     if (!rows.length) return res.status(404).json({ success: false, message: 'Entrada não encontrada.' });
     const e = rows[0];
 
+    const anexos = anexosDoRequest(req);
+    limparTemporarios(req);
+
     // Gera o .docx a partir da entrada (o fluxo decide se anexa)
     let docxBase64 = '';
     let docxNome = e.nome_arquivo || '';
@@ -159,6 +222,10 @@ async function registrarSharePoint(req, res, next) {
       docxNome = doc.nomeArquivo;
     } catch (err) {
       console.warn('[SharePoint] Falha ao gerar DOCX para anexo:', err.message);
+    }
+
+    if (anexos.length) {
+      console.log(`[SharePoint] Registrando com ${anexos.length} anexo(s) além do .docx.`);
     }
 
     const payload = {
@@ -175,6 +242,9 @@ async function registrarSharePoint(req, res, next) {
       area: e.area || '',
       docxNome,
       docxBase64,
+      // Arquivos extras anexados pelo usuário a esta carta (podem ser vários e
+      // de qualquer formato). O fluxo percorre a lista e anexa cada um ao item.
+      anexos,
       sharedSecret: process.env.SHAREPOINT_WEBHOOK_SECRET || '',
     };
 
@@ -222,4 +292,107 @@ async function registrarSharePoint(req, res, next) {
   }
 }
 
-module.exports = { registrarSharePoint, formsUrl, sharepointMode };
+/**
+ * POST /api/historico/:id/sharepoint/pasta
+ * Cria a pasta da carta na biblioteca de documentos e sobe o .docx mais todos
+ * os anexos enviados. Usa um fluxo próprio do Power Automate
+ * (SHAREPOINT_PASTA_WEBHOOK_URL) para não interferir no fluxo de registro que
+ * já está em produção.
+ */
+async function criarPastaSharePoint(req, res, next) {
+  const webhook = process.env.SHAREPOINT_PASTA_WEBHOOK_URL;
+  if (!webhook) {
+    limparTemporarios(req);
+    return res.status(503).json({
+      success: false,
+      message:
+        'Criação de pasta não configurada. Defina SHAREPOINT_PASTA_WEBHOOK_URL no servidor (veja o guia do Power Automate).',
+    });
+  }
+  if (!isEnabled()) {
+    limparTemporarios(req);
+    return res.status(503).json({ success: false, message: 'Banco de dados não configurado.' });
+  }
+
+  try {
+    const { rows } = await query('SELECT * FROM historico WHERE id = $1', [req.params.id]);
+    if (!rows.length) {
+      limparTemporarios(req);
+      return res.status(404).json({ success: false, message: 'Entrada não encontrada.' });
+    }
+    const e = rows[0];
+
+    const anexos = anexosDoRequest(req);
+    limparTemporarios(req);
+
+    // O .docx da carta entra na pasta junto com os anexos
+    const arquivos = [...anexos];
+    try {
+      const doc = await gerarDocxDeEntrada(e);
+      arquivos.unshift({
+        nome: sanitizarNomeSharePoint(doc.nomeArquivo),
+        conteudoBase64: doc.buffer.toString('base64'),
+        tamanho: doc.buffer.length,
+      });
+    } catch (err) {
+      console.warn('[SharePoint] Falha ao gerar DOCX para a pasta:', err.message);
+    }
+
+    if (!arquivos.length) {
+      return res.status(400).json({ success: false, message: 'Nenhum arquivo para enviar à pasta.' });
+    }
+
+    const pastaNome = nomePastaCarta(e);
+    const payload = {
+      acao: 'criarPasta',
+      pastaNome,
+      biblioteca: PASTA_BIBLIOTECA(),
+      caminho: PASTA_CAMINHO(),
+      titulo: e.titulo || '',
+      tema: e.tema || '',
+      orgao: e.orgao || 'ANTT',
+      malha: e.malha || '',
+      responsavel: e.responsavel || '',
+      responsavelEmail: e.responsavel_email || '',
+      arquivos,
+      sharedSecret: process.env.SHAREPOINT_WEBHOOK_SECRET || '',
+    };
+
+    const totalMb = (JSON.stringify(payload).length / 1024 / 1024).toFixed(1);
+    console.log(`[SharePoint] Criando pasta "${pastaNome}" com ${arquivos.length} arquivo(s) (~${totalMb} MB).`);
+
+    let resp;
+    try {
+      resp = await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      return res.status(502).json({ success: false, message: `Não foi possível contatar o fluxo da pasta: ${err.message}` });
+    }
+
+    if (!resp.ok) {
+      const texto = await resp.text().catch(() => '');
+      return res.status(502).json({
+        success: false,
+        message: `O fluxo da pasta retornou ${resp.status}. ${texto.slice(0, 200)}`.trim(),
+      });
+    }
+
+    let pastaUrl = null;
+    try {
+      const j = await resp.json();
+      pastaUrl = j.pastaUrl || j.folderUrl || j.itemUrl || j.link || null;
+    } catch {
+      /* fluxo não retornou JSON — tudo bem */
+    }
+
+    res.json({ success: true, pastaNome, pastaUrl, arquivos: arquivos.length });
+  } catch (err) {
+    limparTemporarios(req);
+    next(err);
+  }
+}
+
+module.exports = { registrarSharePoint, criarPastaSharePoint, formsUrl, sharepointMode };
